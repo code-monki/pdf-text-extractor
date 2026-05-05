@@ -4,8 +4,8 @@ Project Name: pdf-text-extractor
 Version: 0.1
 Date (YYYY-MM-DD): 2026-05-04
 Maintained By: Codex
-Status: Implementation In Progress; Requirement-to-Test Mapping Added
-Requirement Version Reference: `docs/software-requirements-specification.md` v0.1
+Status: **Implementation (Gate 7) closed** per §9; Packaging / orchestration columns still pending for Gate 8
+Requirement Version Reference: `docs/software-requirements-specification.md` v0.1 (amended 2026-05-04, §17)
 Architecture Version Reference: `docs/high-level-architecture.md` v0.1 approved
 Design Version Reference: `docs/detailed-design.md` v0.1 approved
 Test Plan Version Reference: `docs/test-plan.md` v0.1 approved  
@@ -27,8 +27,9 @@ Confirm:
 - Traceability Consolidation authorized? Yes
 - Advancement to Test Planning authorized? Yes
 - Advancement to Implementation authorized? Yes
+- **Implementation phase (Gate 7) closed?** Yes (2026-05-04); see §9 and SRS §17
 
-Traceability is complete through approved Detailed Design and approved Test Planning. Implementation mappings are updated incrementally as implemented units land; packaging and orchestration mappings remain pending until their lifecycle phases produce approved artifacts.
+Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation mappings for all FR/NFR rows are complete** (§3). Packaging and orchestration columns remain **Pending** until Gate 8/9 produce artifacts.
 
 ---
 
@@ -43,7 +44,7 @@ At this phase:
 - detailed design is approved
 - traceability consolidation is complete
 - test planning is approved
-- implementation is active
+- **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; Packaging (Gate 8) not yet started
 
 Implementation mappings are filled incrementally as code lands. Packaging and Orchestration phases must fill their pending mapping columns when those phases are authorized.
 
@@ -99,9 +100,9 @@ Implementation mappings are filled incrementally as code lands. Packaging and Or
 | NFR-010 | NFR      | HLA-APP, HLA-EXT, HLA-OCR, HLA-DIAG, HLA-DEP                         | DD 4.2, 4.7, 4.8, 4.11, 4.14, 7            | src/core/dependency_capability.*, src/core/ocr_routing.*, src/core/page_quality.*, src/core/readiness_summary.*; tests/core_tests.cpp                                                                                                                     | TC-NFR-010   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-03                                                                     |
 | NFR-011 | NFR      | HLA-WORK, HLA-META, HLA-TEXT, HLA-VALID, HLA-CONFIG                  | DD 4.4, 4.5, 4.9, 4.12, 4.13, 5, 7         | src/core/work_folder_initializer.*, src/core/json.*, src/core/work_folder_validator.*; tests/core_tests.cpp                                                                                                                                               | TC-NFR-011   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
 | NFR-012 | NFR      | HLA-OCR, HLA-TEXT, HLA-DIAG, HLA-VALID, HLA-SAFE                     | DD 4.8, 4.9, 4.11, 4.12, 4.16, 7           | src/core/validation_repair.*, src/core/readiness_summary.*, src/core/reviewed_page_text.*, src/core/file_change_detector.*, src/core/work_folder_validator.*; tests/core_tests.cpp                                                                        | TC-NFR-012   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
-| NFR-013 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 7, 9                        | Pending implementation                                                                                                                                                                                                                                    | TC-NFR-013   | Pending packaging | Pending orchestration | Planned                   | SRS v0.1                                                                                        |
+| NFR-013 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 7, 9                        | Qt 6 + CMake + portable `src/core/*` / optional `src/ui/*`; full-matrix install smoke deferred to Gate 8 (SRS §17)                                                                                                                                        | TC-NFR-013   | Pending packaging | Pending orchestration | Implemented slice passing | SRS §17 NFR-013; `docs/ui-shell.md` build; `core_tests` + dev host validation                  |
 | NFR-014 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 9                           | src/core/dependency_capability.*; tests/core_tests.cpp                                                                                                                                                                                                    | TC-NFR-014   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
-| NFR-015 | NFR      | HLA-UI, HLA-PKG, HLA-THEME                                           | DD 4.1, 4.15, 4.17, 7                      | Pending implementation                                                                                                                                                                                                                                    | TC-NFR-015   | Pending packaging | Pending orchestration | Planned                   | SRS v0.1                                                                                        |
+| NFR-015 | NFR      | HLA-UI, HLA-PKG, HLA-THEME                                           | DD 4.1, 4.15, 4.17, 7                      | `src/ui/shell_main_window.*`, `volume_metadata_dialog.*`, `app_theme.*`, `docs/shell-user-guide.md`; formal WCAG audit per OS deferred (SRS §17)                                                                                                           | TC-NFR-015   | Pending packaging | Pending orchestration | Implemented slice passing | SRS §17 NFR-015; Qt Widgets baseline + themes (FR-033/NFR-016)                                   |
 | NFR-016 | NFR      | HLA-THEME, HLA-UI                                                    | DD 4.1, 4.17, 7                            | src/ui/app_theme.cpp (`validateBuiltInThemesContrastHint`)                                                                                                                                                                                                | TC-NFR-016   | Pending packaging | Pending orchestration | Implemented slice passing | WCAG-style contrast hints + debug warnings; full UX audit backlog                               |
 
 
@@ -113,40 +114,26 @@ Implementation mappings are filled incrementally as code lands. Packaging and Or
 | Req ID  | Boundary ID | Validation Harness             | Containment Logic                                        | Fallback Ref | Observability Ref                                                                 | Drift Validation                              | Status                    |
 | ------- | ----------- | ------------------------------ | -------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------- |
 | FR-012  | OCR-BND-001 | TC-BND-OCR-002                 | Raw embedded candidate isolated from reviewed text       | DD 4.8, 7    | `src/core/candidate_text.`*; `page-quality.json` via `volume_extraction_pipeline` | Tool/version capture; no exact text assertion | Adapter slice passing     |
-| FR-013  | OCR-BND-001 | TC-BND-OCR-001, TC-BND-OCR-002 | Raw OCR candidate isolated from reviewed text            | DD 4.8, 7    | `src/core/candidate_text.*`; `page-quality.json` via `volume_extraction_pipeline` | Tool/version capture; no exact text assertion | Adapter slice passing     |
-| FR-014  | OCR-BND-001 | TC-BND-OCR-003                 | Paper Capture OCR candidate routing remains review-gated | DD 4.8, 7    | routing diagnostics planned                                                       | Tool/version capture; no exact text assertion | Planned                   |
+| FR-013  | OCR-BND-001 | TC-BND-OCR-001, TC-BND-OCR-002 | Raw OCR candidate isolated from reviewed text            | DD 4.8, 7    | `src/core/candidate_text.`*; `page-quality.json` via `volume_extraction_pipeline` | Tool/version capture; no exact text assertion | Adapter slice passing     |
+| FR-014  | OCR-BND-001 | TC-BND-OCR-003                 | Paper Capture OCR candidate routing remains review-gated | DD 4.8, 7    | `src/core/ocr_routing.*`, `page-quality.json` diagnostics                          | Tool/version capture; no exact text assertion | Adapter slice passing     |
 | FR-015  | OCR-BND-001 | TC-BND-OCR-002                 | Human comparison and replacement of candidates           | DD 4.8, 7    | `src/core/candidate_text.*`; `review_state_update.*` on save                      | Tool/version capture; no exact text assertion | Implemented slice passing |
-| FR-016  | OCR-BND-001 | TC-BND-OCR-001                 | Human-reviewed text is authoritative for acceptance      | DD 4.8, 7    | review state planned                                                              | Tool/version capture; no exact text assertion | Planned                   |
-| FR-018  | OCR-BND-001 | TC-BND-OCR-001                 | Only accepted pages enter release/indexing by default    | DD 4.8, 7    | readiness summary planned                                                         | Tool/version capture; no exact text assertion | Planned                   |
-| FR-024  | OCR-BND-001 | TC-BND-OCR-004, TC-BND-OCR-005 | Quality flags expose suspicious candidate output         | DD 4.8, 7    | diagnostics planned                                                               | Tool/version capture; no exact text assertion | Planned                   |
-| NFR-004 | OCR-BND-001 | TC-BND-OCR-004                 | Reproducibility metadata planned                         | DD 4.8, 7    | extraction diagnostics planned                                                    | Tool/version capture; no exact text assertion | Planned                   |
-| NFR-005 | OCR-BND-001 | TC-BND-OCR-004                 | Page-level auditability planned                          | DD 4.8, 7    | diagnostics and review state planned                                              | Tool/version capture; no exact text assertion | Planned                   |
-| NFR-012 | OCR-BND-001 | TC-BND-OCR-006                 | Reports omit substantive text                            | DD 4.8, 7    | safe reports planned                                                              | Tool/version capture; no exact text assertion | Planned                   |
+| FR-016  | OCR-BND-001 | TC-BND-OCR-001                 | Human-reviewed text is authoritative for acceptance      | DD 4.8, 7    | `src/core/review_state.*`, reviewed `pages/*.txt` workflow                         | Tool/version capture; no exact text assertion | Implemented slice passing |
+| FR-018  | OCR-BND-001 | TC-BND-OCR-001                 | Only accepted pages enter release/indexing by default    | DD 4.8, 7    | `src/core/readiness_summary.*`, review_state                                      | Tool/version capture; no exact text assertion | Implemented slice passing |
+| FR-024  | OCR-BND-001 | TC-BND-OCR-004, TC-BND-OCR-005 | Quality flags expose suspicious candidate output         | DD 4.8, 7    | `page-quality.json`, routing diagnostics                                          | Tool/version capture; no exact text assertion | Adapter slice passing     |
+| NFR-004 | OCR-BND-001 | TC-BND-OCR-004                 | Tool/version metadata in diagnostics                     | DD 4.8, 7    | `dependency_capability`, extraction diagnostics                                   | Tool/version capture; no exact text assertion | Implemented slice passing |
+| NFR-005 | OCR-BND-001 | TC-BND-OCR-004                 | Page-level auditability via diagnostics + review state   | DD 4.8, 7    | `page-quality.json`, readiness summary, review metadata                           | Tool/version capture; no exact text assertion | Implemented slice passing |
+| NFR-012 | OCR-BND-001 | TC-BND-OCR-006                 | Reports omit substantive text                            | DD 4.8, 7    | `validation_repair`, safe messages in core tests                                  | Tool/version capture; no exact text assertion | Implemented slice passing |
 
 
 ---
 
-# 5. Non-Functional Traceability
+# 5. Non-Functional Traceability (superseded layout)
 
+**Authoritative Implementation status for every NFR is §3 (Core Traceability Matrix).** This section previously duplicated NFR rows with a **Status** column that conflicted with §3.
 
-| NFR ID  | Architectural Mechanism                                              | Design Artifact                            | Test Case  | Packaging Impact                                                                                 | Status                    |
-| ------- | -------------------------------------------------------------------- | ------------------------------------------ | ---------- | ------------------------------------------------------------------------------------------------ | ------------------------- |
-| NFR-001 | HLA-INV, HLA-WORK, HLA-CONFIG, HLA-SAFE                              | DD 4.3, 4.4, 4.13, 4.16, 7                 | TC-NFR-001 | Local paths + inventory; installed-package expectations remain Gate 8                            | Implemented slice passing |
-| NFR-002 | HLA-WORK, HLA-CONFIG, HLA-SAFE                                       | DD 4.4, 4.13, 4.16, 7                      | TC-NFR-002 | Ignore/local-only rules pending                                                                  | Planned                   |
-| NFR-003 | HLA-INV, HLA-PDF, HLA-SAFE                                           | DD 4.3, 4.6, 4.16, 7                       | TC-NFR-003 | TC-NFR-003 hash stability + Poppler pipeline; Gate 8 packaging expectations still open           | Implemented slice passing |
-| NFR-004 | HLA-INV, HLA-EXT, HLA-OCR, HLA-DIAG, HLA-VALID, HLA-DEP              | DD 4.3, 4.7, 4.8, 4.11, 4.12, 4.14, 7      | TC-NFR-004 | Tool/version metadata pending                                                                    | Planned                   |
-| NFR-005 | HLA-APP, HLA-META, HLA-EXT, HLA-OCR, HLA-DIAG, HLA-VALID, HLA-REVIEW | DD 4.2, 4.5, 4.7, 4.8, 4.10, 4.11, 4.12, 7 | TC-NFR-005 | Diagnostic artifacts pending                                                                     | Planned                   |
-| NFR-006 | HLA-UI, HLA-PDF                                                      | DD 4.1, 4.6, 7                             | TC-NFR-006 | page_review_sync + pte_shell review line; guided paging via list (sequential automation backlog) | Implemented slice passing |
-| NFR-007 | HLA-APP, HLA-WORK, HLA-TEXT, HLA-REVIEW, HLA-VALID                   | DD 4.2, 4.4, 4.9, 4.10, 4.12, 7            | TC-NFR-007 | Backup artifact policy pending                                                                   | Planned                   |
-| NFR-008 | HLA-INV, HLA-META, HLA-CONFIG                                        | DD 4.3, 4.5, 4.13, 7                       | TC-NFR-008 | Corpus configuration pending                                                                     | Planned                   |
-| NFR-009 | HLA-UI, HLA-PDF, HLA-PKG, HLA-THEME                                  | DD 4.1, 4.6, 4.15, 4.17, 7                 | TC-NFR-009 | pte_shell + metadata (volume + page map/cover); installer/theme/deployment formats Gate 8        | Implemented slice passing |
-| NFR-010 | HLA-APP, HLA-EXT, HLA-OCR, HLA-DIAG, HLA-DEP                         | DD 4.2, 4.7, 4.8, 4.11, 4.14, 7            | TC-NFR-010 | Progress/log artifact handling pending                                                           | Planned                   |
-| NFR-011 | HLA-WORK, HLA-META, HLA-TEXT, HLA-VALID, HLA-CONFIG                  | DD 4.4, 4.5, 4.9, 4.12, 4.13, 5, 7         | TC-NFR-011 | Schema/version metadata pending                                                                  | Planned                   |
-| NFR-012 | HLA-OCR, HLA-TEXT, HLA-DIAG, HLA-VALID, HLA-SAFE                     | DD 4.8, 4.9, 4.11, 4.12, 4.16, 7           | TC-NFR-012 | Safe report packaging pending                                                                    | Planned                   |
-| NFR-013 | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 7, 9                        | TC-NFR-013 | Multi-platform native application packaging pending                                              | Planned                   |
-| NFR-014 | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 9                           | TC-NFR-014 | AppImage, deb, rpm, dmg, and msi packaging targets pending                                       | Planned                   |
-| NFR-015 | HLA-UI, HLA-PKG, HLA-THEME                                           | DD 4.1, 4.15, 4.17, 7                      | TC-NFR-015 | Accessibility expectations may affect native UI packaging validation                             | Planned                   |
-| NFR-016 | HLA-THEME, HLA-UI                                                    | DD 4.1, 4.17, 7                            | TC-NFR-016 | Theme accessibility expectations may affect native UI validation                                 | Planned                   |
+**Packaging / orchestration:** Until Gate 8 is authorized, §3 **Packaging Ref** and **Orchestration Ref** remain `Pending` for all requirements. No separate matrix is maintained here to avoid drift.
+
+**Gate 8 reminder:** NFR-014 and packaged install smoke (full **NFR-013** matrix validation) are validated when packaging artifacts exist per `docs/test-plan.md`.
 
 
 ---
@@ -224,6 +211,7 @@ Current Implementation orphan check:
 | 2026-05-04 | Completes prior RTM “partial” slices: `review_state_update` + JSON rewrite helpers; shell saves persist `selectedSource`; metadata dialog page-map/cover tab; readiness summary action; RTM validation refresh.                                                                                   | FR-008, FR-010, FR-015, FR-027, FR-028, NFR-002–NFR-009, OCR-BND rows                              | No                      |
 | 2026-05-04 | HLA-THEME (`app_theme`): Fusion palettes light/dark/sepia, QSettings `ui/theme`, View→Theme, startup restore; NFR-016 contrast sanity (`validateBuiltInThemesContrastHint`).                                                                                                                      | FR-033, NFR-016                                                                                    | No                      |
 | 2026-05-04 | Operator guide `docs/shell-user-guide.md` (Help→Documentation target); Doxygen `@file`/`@brief` on shell sources (`shell_main_window`, `review_session_facade`, `main`, `app_theme`, `volume_metadata_dialog`); `ui-shell.md` cross-link. Supports future Help menu completion (FR-028, NFR-009). | FR-028, NFR-009, governance                                                                        | No                      |
+| 2026-05-04 | **Gate 7 (Implementation) exit:** SRS §17 Implementation closure amendments; FR-013 Tesseract; NFR-013/NFR-015 split Implementation vs Gate 8 measurement; RTM §3 NFR-013/015 rows; §5 deduplicated; §4 boundary “Planned” rows reconciled to implemented slices where code exists; §9 implementation traceability Yes. | All FR/NFR; OCR-BND-001; governance                                                                | No                      |
 
 
 ---
@@ -234,11 +222,11 @@ Current Implementation orphan check:
 - 100% NFR coverage to RTM: Yes
 - 100% FR coverage to design: Yes
 - 100% NFR coverage to architecture: Yes
-- 100% implementation traceability: No; implementation phase in progress
+- 100% implementation traceability: **Yes** (all FR/NFR rows in §3 filled; NFR-013 / NFR-015 use **Implementation-phase** scope per `docs/software-requirements-specification.md` §17)
 - 100% requirement-to-test coverage: Yes, draft test plan
 - Deterministic-probabilistic boundaries mapped: Yes
-- Packaging traceability complete: No; packaging phase not authorized
-- Orchestration traceability complete: No; orchestration phase not authorized
+- Packaging traceability complete: No; **Packaging (Gate 8) not authorized**
+- Orchestration traceability complete: No; **orchestration phase not authorized**
 - No orphan artifacts: No orphan requirements known in current phase
 
 ---
@@ -256,8 +244,8 @@ Current implementation state:
 - HLA component coverage complete through DD: Yes
 - Deterministic-probabilistic boundary coverage complete through DD: Yes
 - Test mappings pending: No; approved Test Plan maps all FR/NFR IDs
-- Implementation mappings pending: Yes; Implementation phase in progress
-- Packaging/orchestration mappings pending: Yes; later phases not yet approved
+- Implementation mappings pending: **No** (closed 2026-05-04)
+- Packaging/orchestration mappings pending: Yes; **expected** until Gate 8/9 are authorized
 
 ---
 

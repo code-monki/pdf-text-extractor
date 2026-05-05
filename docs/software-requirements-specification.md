@@ -2,7 +2,7 @@
 
 Project Name: pdf-text-extractor
 Version: 0.1
-Date (YYYY-MM-DD): 2026-05-01
+Date (YYYY-MM-DD): 2026-05-01 (amended 2026-05-04 — Implementation closure scope; see §17)
 Author(s): Chuck, Codex
 Status: Approved; amended during DD draft
 Project Primer Version Reference: `docs/pdf-text-extractor-ideation.md` v0.2
@@ -336,7 +336,7 @@ The primary stakeholder impact is reducing manual coordination mistakes, exposin
 **Priority:** High
 **Dependencies:** FR-002, FR-004
 **Constraints:** OCR output may vary and must be treated as candidate text.
-**Notes:** OCR engine and mode selection are not finalized here.
+**Notes:** OCR candidate generation shall use **Tesseract** as the engine (`src/core/tesseract_ocr.`*; subprocess/configuration per detailed design). Modes and CLI flags remain design-controlled.
 
 ## FR-014 Paper Capture OCR Routing
 
@@ -791,7 +791,9 @@ The primary stakeholder impact is reducing manual coordination mistakes, exposin
 **Category:** Portability
 **Description:** The native local application shall support Linux, macOS, and Windows target platforms at the minimum versions and architectures defined in the platform support matrix.
 **Measurement Criteria:** A release candidate can be installed or launched and can perform core local workflow operations on each target platform and architecture in the platform support matrix.
-**Constraints:** The platform support matrix is a project target requirement supplied by the project owner; exact packaging mechanisms are deferred.
+**Implementation measurement (Gate 7 — Implementation):** The codebase shall be structured for those targets (Qt 6 Widgets shell optional build, CMake, portable core library). **Primary development validation** on at least one host OS/architecture shall be recorded with RTM evidence (build + automated tests). This satisfies Implementation-phase portability obligations before installable release artifacts exist.
+**Packaging measurement (Gate 8 — Packaging):** Full-matrix **install/launch smoke** and packaged artifact validation per row of the platform matrix occur when release packaging exists; see NFR-014.
+**Constraints:** The platform support matrix is a project target requirement supplied by the project owner; exact packaging mechanisms are deferred to Packaging.
 **Dependencies:** FR-028, FR-029
 
 ## NFR-014 Package Artifact Targets
@@ -809,6 +811,8 @@ The primary stakeholder impact is reducing manual coordination mistakes, exposin
 **Category:** Usability
 **Description:** The native user interface shall provide accessible basic interaction behavior, using WCAG 2.2 AA as an applicability benchmark where native desktop conventions allow.
 **Measurement Criteria:** Core workflows support keyboard operation, visible focus, focus not being obscured, readable text scaling, sufficient text and non-text contrast, labeled inputs, identifiable validation errors, non-drag alternatives for drag-like actions, and reasonable pointer target sizing.
+**Implementation measurement (Gate 7 — Implementation):** Core workflows use **Qt Widgets** standard controls (`pte_shell`), documented shortcuts and actions (`docs/shell-user-guide.md`), and built-in themes with contrast sanity checks (**FR-033 / NFR-016**, `app_theme`). This documents the baseline native-desktop UX slice required before packaging-level audits.
+**Deferred measurement:** Formal evidence against **every** WCAG-oriented bullet above on **each** supported platform (including assistive technology matrix testing) is **out of scope for Gate 7** unless separately scheduled; track under Packaging / hardening or a future usability milestone.
 **Constraints:** WCAG is web-focused; conformance language must be adapted to native desktop UI conventions and platform accessibility APIs.
 **Dependencies:** FR-006, FR-019, FR-020, FR-021, FR-028
 
@@ -861,6 +865,7 @@ Related requirements:
 - The primary user-facing product shall be a native local application, not a browser-based application.
 - The native application shall support the following minimum target platforms:
 
+
 | Operating System/Distro | Architectures    | Minimum Version |
 | ----------------------- | ---------------- | --------------- |
 | Linux/Fedora            | X86_64 / AArch64 | 44              |
@@ -868,15 +873,15 @@ Related requirements:
 | macOS                   | X86_64 / AArch64 | 26.4            |
 | Windows                 | X86_64           | 11              |
 
+
 - The system shall not require a hosted service, remote database, remote API, or application-managed network service for core operation.
 - Source PDFs shall not be modified.
 - Source PDFs and derived full-text artifacts shall remain local unless explicitly approved otherwise.
 - Output destinations shall remain user-configurable.
 - Source PDF paths shall be recorded relative to the corpus root when possible.
 - The system shall not hard-code one corpus' metadata into reusable behavior.
-- Architecture, framework, OCR engine finalization, and UI toolkit selection are deferred.
-- Known local tool candidates include Poppler-family PDF utilities and Tesseract OCR, but final dependency selection is deferred.
-- Requirements must remain traceable to future architecture, design, implementation, and tests.
+- **Resolved for Implementation (Gate 7):** Presentation uses **Qt 6 Widgets** (`pte_shell`). PDF inspection and embedded text use **Poppler-family** utilities. OCR candidate generation uses **Tesseract**. Further packaging and installer choices remain **Packaging (Gate 8)**.
+- Requirements must remain traceable to architecture, design, implementation, and tests.
 
 ---
 
@@ -888,7 +893,7 @@ Related requirements:
 - Raw candidates are useful for recovery and diagnostics and are retained by default.
 - Optional bibliographic metadata may vary widely by corpus and volume.
 - A broader reusable library package format may be needed later, but ownership is not yet assigned to this project.
-- Poppler-family tools, Tesseract, and OCRmyPDF are experiment inputs, not finalized product dependencies.
+- **Product OCR path:** Tesseract for OCR candidates (see FR-013). OCRmyPDF remains an optional reference/experiment unless later scoped.
 - Native local application expectation is driven by local-file workflow friction reduction.
 
 ---
@@ -1036,78 +1041,20 @@ Deferred items:
 
 # 14. Risk Assessment
 
-<table>
-  <thead>
-    <tr>
-      <th style="white-space: nowrap;">Risk ID</th>
-      <th>Risk</th>
-      <th>Classification</th>
-      <th>Mitigation Direction</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-001</code></td>
-      <td>OCR output may be plausible but wrong.</td>
-      <td>High</td>
-      <td>Treat OCR as candidate text, require review, preserve diagnostics.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-002</code></td>
-      <td>Embedded text may be present but badly ordered or misleading.</td>
-      <td>High</td>
-      <td>Preserve embedded candidate separately, compare candidates, flag suspicious pages.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-003</code></td>
-      <td>Derived full text may be accidentally committed or exposed.</td>
-      <td>High</td>
-      <td>Maintain ignore rules, local-only artifact policy, safe reports.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-004</code></td>
-      <td>Manual review workload may be high.</td>
-      <td>Moderate</td>
-      <td>Native synchronized review workflow, keyboard shortcuts, readiness summaries.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-005</code></td>
-      <td>Native UI expectations may over-constrain architecture.</td>
-      <td>Moderate</td>
-      <td>Requirements define workflow, not framework; HLA preserves engine boundaries.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-006</code></td>
-      <td>Broader library packaging could expand extractor scope.</td>
-      <td>Moderate</td>
-      <td>Keep packaging/export ownership explicit and defer full library scope.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-007</code></td>
-      <td>Metadata model may grow too broad.</td>
-      <td>Moderate</td>
-      <td>Base/optional metadata model, schema versioning, user-editable fields.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-008</code></td>
-      <td>OCR tool dependencies may reduce reproducibility.</td>
-      <td>Moderate</td>
-      <td>Capture diagnostics and tool metadata requirements; defer tool finalization.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-009</code></td>
-      <td>Page identity and printed labels may be conflated.</td>
-      <td>Moderate</td>
-      <td>Use PDF page index/page file ID as stable identity; printed label is metadata.</td>
-    </tr>
-    <tr>
-      <td style="white-space: nowrap;"><code>R-010</code></td>
-      <td>Requirement set may still include design bias.</td>
-      <td>Low</td>
-      <td>Review before approval; defer architecture and framework choices.</td>
-    </tr>
-  </tbody>
-</table>
+
+| Risk ID | Risk                                                          | Classification | Mitigation Direction                                                               |
+| ------- | ------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `R-001` | OCR output may be plausible but wrong.                        | High           | Treat OCR as candidate text, require review, preserve diagnostics.                 |
+| `R-002` | Embedded text may be present but badly ordered or misleading. | High           | Preserve embedded candidate separately, compare candidates, flag suspicious pages. |
+| `R-003` | Derived full text may be accidentally committed or exposed.   | High           | Maintain ignore rules, local-only artifact policy, safe reports.                   |
+| `R-004` | Manual review workload may be high.                           | Moderate       | Native synchronized review workflow, keyboard shortcuts, readiness summaries.      |
+| `R-005` | Native UI expectations may over-constrain architecture.       | Moderate       | Requirements define workflow, not framework; HLA preserves engine boundaries.      |
+| `R-006` | Broader library packaging could expand extractor scope.       | Moderate       | Keep packaging/export ownership explicit and defer full library scope.             |
+| `R-007` | Metadata model may grow too broad.                            | Moderate       | Base/optional metadata model, schema versioning, user-editable fields.             |
+| `R-008` | OCR tool dependencies may reduce reproducibility.             | Moderate       | Capture diagnostics and tool metadata requirements; defer tool finalization.       |
+| `R-009` | Page identity and printed labels may be conflated.            | Moderate       | Use PDF page index/page file ID as stable identity; printed label is metadata.     |
+| `R-010` | Requirement set may still include design bias.                | Low            | Review before approval; defer architecture and framework choices.                  |
+
 
 ---
 
@@ -1140,6 +1087,27 @@ Confirm readiness to proceed to Architecture:
 - Human approval granted? Yes
 
 Requirements phase is approved. High-Level Architecture may begin as the next lifecycle phase.
+
+---
+
+# 17. Implementation closure amendments (Gate 7)
+
+**Effective:** 2026-05-04  
+**Authority:** Project owner amendment under maintained SRS traceability (RTM updated same date).
+
+This section records **scope explicitly satisfied at Implementation exit** versus work deferred to **Packaging (Gate 8)** or later hardening:
+
+
+| Topic             | Gate 7 (Implementation)                                                          | Deferred                                               |
+| ----------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| OCR engine        | **Tesseract** for OCR candidates (FR-013); Poppler family for PDF/embed/raster   | —                                                      |
+| UI toolkit        | Qt 6 Widgets shell (`pte_shell`)                                                 | Installer-branded UX                                   |
+| **NFR-013**       | Portable codebase + recorded primary validation + automated tests (RTM evidence) | Full-matrix install/launch smoke on packaged artifacts |
+| **NFR-015**       | Qt Widgets baseline, shortcuts/docs, themes + NFR-016 contrast hints             | Full WCAG-oriented audit per OS / AT matrix            |
+| Packaging formats | —                                                                                | NFR-014; artifact validation (test plan)               |
+
+
+Downstream artifacts: `docs/requirements-traceability-matrix.md` (§3, §9), `docs/phase-gate-record.md`.
 
 ---
 

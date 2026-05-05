@@ -3,7 +3,27 @@
 Project Name: pdf-text-extractor
 Version / Branch: Documentation baseline
 Maintainer: Chuck, Codex
-RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1
+RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 7 exit 2026-05-04)
+
+---
+
+# Entry ID: DL-008
+
+Date (YYYY-MM-DD): 2026-05-04  
+Lifecycle Phase: Implementation (Gate 7 exit)  
+Author: Chuck (owner directive); Codex (documentation execution)
+
+Status: Approved
+
+## 1. Decision Summary
+
+Close **Gate 7 (Implementation)** and authorize **Gate 8 (Packaging)** as the next lifecycle focus. Finalize SRS scope split: **Tesseract** for FR-013 OCR candidates; Qt 6 Widgets + Poppler family; **NFR-013** / **NFR-015** Implementation-phase measurements vs full-matrix / WCAG audits deferred per SRS §17.
+
+## 2. Evidence
+
+- `docs/software-requirements-specification.md` §17  
+- `docs/requirements-traceability-matrix.md` §9 (implementation traceability Yes)  
+- `docs/phase-gate-record.md` (Gate 7 → 8 Closed)
 
 ---
 
