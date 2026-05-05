@@ -6,7 +6,7 @@
 // FR-008, FR-009, FR-010, FR-011,
 // FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-022, FR-024, FR-025,
 // FR-021, FR-026, FR-027, FR-029, FR-030, FR-031, FR-032, NFR-001, NFR-002,
-// NFR-003, NFR-004, NFR-005, NFR-007, NFR-008, NFR-010, NFR-011, NFR-012,
+// NFR-003, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, NFR-010, NFR-011, NFR-012,
 // NFR-014.
 // Test references: TC-FR-001, TC-FR-002, TC-FR-003, TC-FR-004, TC-FR-005,
 // TC-FR-006, TC-FR-007, TC-FR-008, TC-FR-009, TC-FR-010, TC-FR-011,
@@ -14,8 +14,8 @@
 // TC-FR-017, TC-FR-018, TC-FR-021, TC-FR-022, TC-FR-024, TC-FR-025,
 // TC-FR-026,
 // TC-FR-027, TC-FR-029, TC-FR-030, TC-FR-031, TC-NFR-001, TC-NFR-002,
-// TC-NFR-003, TC-NFR-004, TC-NFR-005, TC-NFR-008, TC-NFR-010, TC-NFR-011,
-// TC-NFR-012, TC-FR-032, TC-NFR-007, TC-NFR-014, TC-BND-OCR-001,
+// TC-NFR-003, TC-NFR-004, TC-NFR-005, TC-NFR-006, TC-NFR-008, TC-NFR-010, TC-NFR-011,
+// TC-NFR-012, TC-FR-032, TC-NFR-007, TC-NFR-014, TC-NFR-009, TC-BND-OCR-001,
 // TC-BND-OCR-002, TC-BND-OCR-005.
 // Assumption: Synthetic fixture text is non-copyrighted and safe to commit.
 
@@ -23,6 +23,7 @@
 #include "core/candidate_text.hpp"
 #include "core/dependency_capability.hpp"
 #include "core/file_digest.hpp"
+#include "core/json.hpp"
 #include "core/local_path_intent.hpp"
 #include "core/volume_bootstrap.hpp"
 #include "core/file_change_detector.hpp"
@@ -30,11 +31,13 @@
 #include "core/output_config.hpp"
 #include "core/page_id.hpp"
 #include "core/page_quality.hpp"
+#include "core/page_review_sync.hpp"
 #include "core/pdf_inspection_poppler.hpp"
 #include "core/process_runner.hpp"
 #include "core/candidate_generation_poppler.hpp"
 #include "core/volume_extraction_pipeline.hpp"
 #include "core/readiness_summary.hpp"
+#include "core/review_state_update.hpp"
 #include "core/reviewed_page_text.hpp"
 #include "core/review_state.hpp"
 #include "core/review_workflow.hpp"
@@ -161,8 +164,8 @@ void writeValidWorkFolder(const fs::path& root) {
     "pageCount": 2
   },
   "pageMap": {
-    "0001": { "pdfPage": 1, "textPath": "pages/0001.txt", "printedPageLabel": "i" },
-    "0002": { "pdfPage": 2, "textPath": "pages/0002.txt", "printedPageLabel": "1" }
+    "0001": { "pdfPage": 1, "pageTextPath": "pages/0001.txt", "printedPageLabel": "i" },
+    "0002": { "pdfPage": 2, "pageTextPath": "pages/0002.txt", "printedPageLabel": "1" }
   }
 })JSON");
     writeText(root / "page-quality.json", R"JSON({
@@ -732,6 +735,67 @@ void testVolumeBootstrapEndToEnd() {
             "bootstrap refreshed page-quality");
 }
 
+/**
+ * @brief Re-opening a matching work folder with resume skips re-init and leaves reviewed
+ *        pages/N.txt content intact.
+ */
+void testVolumeBootstrapResumeSkipsReExtraction() {
+#ifdef PTE_TEST_FIXTURE_ROOT
+    const fs::path pdf = fs::path(PTE_TEST_FIXTURE_ROOT) / "hello.pdf";
+#else
+    const fs::path pdf;
+#endif
+    if (pdf.empty() || !fs::exists(pdf)) {
+        return;
+    }
+
+    const auto probeTxt =
+        pte::core::runProcessArgv(std::nullopt, std::vector<std::string>{"pdftotext", "-v"});
+    if (probeTxt.spawnFailed) {
+        return;
+    }
+
+    const auto root = makeTempRoot() / "bootstrap-resume";
+    fs::create_directories(root / "corpus");
+    const fs::path localPdf = root / "corpus" / "hello.pdf";
+    fs::copy_file(pdf, localPdf);
+
+    pte::core::VolumeBootstrapRequest first;
+    first.corpusRoot = root / "corpus";
+    first.sourcePdfPath = localPdf;
+    first.workFolder = root / "work";
+    first.volumeId = "resume-skip-volume";
+    first.title = "Resume";
+    first.subtitle = "";
+    first.sortTitle = "";
+    first.group = "";
+    first.generation.extractEmbedded = true;
+    first.generation.extractOcr = false;
+    first.runCandidateExtraction = true;
+    first.resumeWhenWorkFolderMatches = false;
+
+    const auto firstRun = pte::core::VolumeBootstrapService().run(first);
+    require(firstRun.success, "first bootstrap run succeeds");
+    require(firstRun.extractionCompleted, "first run performs extraction");
+
+    const fs::path pageFile = root / "work" / "pages" / "0001.txt";
+    writeText(pageFile, "resume-preserved-reviewed-marker\n");
+
+    pte::core::VolumeBootstrapRequest second = first;
+    second.resumeWhenWorkFolderMatches = true;
+    second.reextractWhenResuming = false;
+
+    const auto secondRun = pte::core::VolumeBootstrapService().run(second);
+    require(secondRun.success, "resume bootstrap succeeds");
+    require(!secondRun.extractionCompleted, "resume without reextract skips candidate extraction");
+    require(secondRun.safeMessage.find("resumed") != std::string::npos,
+            "resume path reports work folder reuse");
+
+    const auto after = readFile(pageFile);
+    require(after.has_value() && after->find("resume-preserved-reviewed-marker") != std::string::npos,
+            "reviewed page text survives resume bootstrap");
+}
+
 /** @brief Bootstrap without extraction leaves initializer diagnostics only. */
 void testVolumeBootstrapInitWithoutExtraction() {
 #ifdef PTE_TEST_FIXTURE_ROOT
@@ -785,6 +849,38 @@ void testVolumeMetadataWrite() {
             "volume metadata preserves optional bibliographic field");
     require(written && written->find("\"0002\"") != std::string::npos,
             "volume metadata writes page map entries");
+}
+
+/** @brief TC-FR-006: loadVolumeMetadata parses synthetic volume.json (including pageTextPath). */
+void testVolumeMetadataLoadFromFixture() {
+    const auto root = makeTempRoot() / "volume-metadata-load";
+    writeValidWorkFolder(root);
+    const pte::core::VolumeMetadataResult loaded =
+        pte::core::VolumeMetadataService().loadVolumeMetadata(root);
+    require(loaded.success, "volume metadata load succeeds");
+    require(loaded.metadata.volumeId == "synthetic-volume", "load preserves volumeId");
+    require(loaded.metadata.title == "Synthetic Volume", "load preserves title");
+    require(loaded.metadata.pageMap.size() == 2, "load preserves page map size");
+    require(loaded.metadata.pageMap[0].pageTextPath == "pages/0001.txt",
+            "load maps pageTextPath");
+    require(loaded.metadata.sourcePageCount == 2, "load preserves source page count");
+}
+
+/** @brief TC-FR-006: round-trip title edit through load and write. */
+void testVolumeMetadataLoadRewriteTitle() {
+    const auto root = makeTempRoot() / "volume-metadata-rewrite";
+    writeValidWorkFolder(root);
+    pte::core::VolumeMetadataResult loaded =
+        pte::core::VolumeMetadataService().loadVolumeMetadata(root);
+    require(loaded.success, "load before rewrite");
+    loaded.metadata.title = "Rewritten Title";
+    const auto saved =
+        pte::core::VolumeMetadataService().writeVolumeMetadata(root, loaded.metadata);
+    require(saved.success, "rewrite write succeeds");
+    const pte::core::VolumeMetadataResult again =
+        pte::core::VolumeMetadataService().loadVolumeMetadata(root);
+    require(again.success, "load after rewrite");
+    require(again.metadata.title == "Rewritten Title", "title round-trip");
 }
 
 /** @brief Verifies printed page labels update independently from PDF page number. */
@@ -1119,6 +1215,31 @@ void testWorkFolderInitializationCreatesValidLayout() {
 
     const auto report = pte::core::WorkFolderValidator().validate(root);
     require(report.ok(), "initialized work folder validates cleanly");
+}
+
+/** @brief Verifies that existing pages/N.txt files are not replaced when re-initializing. */
+void testWorkFolderInitializationPreservesExistingPageFiles() {
+    const auto root = makeTempRoot() / "init-preserves-pages";
+    fs::create_directories(root / "pages");
+    writeText(root / "pages" / "0001.txt", "preserved-reviewed-page-marker\n");
+
+    const pte::core::WorkFolderInitRequest request{
+        root,
+        "synthetic-volume",
+        "Synthetic Volume",
+        "",
+        "Synthetic Volume",
+        "",
+        {root / "source.pdf", "source.pdf", 3}
+    };
+
+    const auto result = pte::core::WorkFolderInitializer().initialize(request);
+    require(result.success, "init with pre-existing page file succeeds");
+    const auto first = readFile(root / "pages" / "0001.txt");
+    require(first.has_value() && first->find("preserved-reviewed-page-marker") != std::string::npos,
+            "existing page 1 text is not overwritten");
+    require(fs::exists(root / "pages" / "0002.txt"), "missing page 2 is still created");
+    require(fs::exists(root / "pages" / "0003.txt"), "missing page 3 is still created");
 }
 
 /** @brief Verifies that initialization writes default raw review state entries. */
@@ -1706,6 +1827,50 @@ void testReadinessSummarySafeMessages() {
             "readiness safe message omits page text");
 }
 
+/** @brief Verifies review-state.json gains selected source and workflow hints after a save patch. */
+void testReviewStateUpdateSetsSelectedSource() {
+    const auto root = makeTempRoot() / "review-state-update";
+    fs::create_directories(root);
+    writeText(root / "review-state.json", R"JSON({
+  "schemaVersion": 1,
+  "volumeId": "v",
+  "pages": {
+    "0001": { "pdfPage": 1, "status": "raw", "selectedSource": "empty", "reviewedAt": null, "reviewedBy": null, "notes": "", "dirtyState": "clean" }
+  }
+})JSON");
+    pte::core::ReviewStatePageSavePatch patch;
+    patch.selectedSource = "embedded";
+    const auto r = pte::core::applyReviewStateAfterPageTextSave(root, "0001", patch);
+    require(r.success, "review state update succeeds");
+    const auto out = readFile(root / "review-state.json");
+    require(out.has_value(), "review-state.json still readable");
+    require(out->find("embedded") != std::string::npos, "selectedSource records embedded");
+    require(out->find("editing") != std::string::npos, "raw advances to editing on save patch");
+    require(out->find("dirty") != std::string::npos, "dirtyState marks dirty");
+}
+
+/** @brief Verifies compact JSON serialization round-trips through the parser. */
+void testFormatJsonCompactRoundTrip() {
+    const char* doc = "{\"schemaVersion\":1,\"pages\":{}}";
+    const auto p = pte::core::parseJson(doc);
+    require(p.value.has_value(), "parse minimal json");
+    const std::string formatted = pte::core::formatJsonCompact(*p.value);
+    const auto p2 = pte::core::parseJson(formatted);
+    require(p2.value.has_value(), "formatJsonCompact output re-parses");
+}
+
+/** @brief TC-NFR-006: JSON snapshot aligns review status with volume printed label (no page text read). */
+void testTnfr006PageReviewSyncSnapshot() {
+    const auto root = makeTempRoot() / "nfr-006-review-sync";
+    writeValidWorkFolder(root);
+    const pte::core::PageReviewSyncSnapshot snapshot =
+        pte::core::loadPageReviewSyncSnapshot(root, "0001");
+    require(snapshot.loaded, "TC-NFR-006 snapshot loads");
+    require(snapshot.reviewStatus == "accepted", "TC-NFR-006 review status from review-state");
+    require(snapshot.printedPageLabel == "i", "TC-NFR-006 printed label from volume.json pageMap");
+    require(snapshot.volumeTitle == "Synthetic Volume", "TC-NFR-006 volume title");
+}
+
 /** @brief Verifies repair planning proposes safe actions for repairable findings. */
 void testValidationRepairPlanRepairableFindings() {
     const auto root = makeTempRoot() / "repair-plan";
@@ -1802,9 +1967,12 @@ int main() {
     runTest("inventory with Poppler pdfinfo", testInventoryWithPopplerPdfinfo);
     runTest("volume extract rewrites page-quality", testVolumeExtractRewritesPageQuality);
     runTest("volume bootstrap end-to-end", testVolumeBootstrapEndToEnd);
+    runTest("volume bootstrap resume skips re-extraction", testVolumeBootstrapResumeSkipsReExtraction);
     runTest("volume bootstrap init without extraction", testVolumeBootstrapInitWithoutExtraction);
 #endif
     runTest("volume metadata write", testVolumeMetadataWrite);
+    runTest("TC-FR-006 volume metadata load from fixture", testVolumeMetadataLoadFromFixture);
+    runTest("TC-FR-006 volume metadata title round-trip", testVolumeMetadataLoadRewriteTitle);
     runTest("volume metadata printed page label", testVolumeMetadataPrintedPageLabel);
     runTest("volume metadata cover page", testVolumeMetadataCoverPage);
     runTest("volume metadata rejects invalid page map",
@@ -1830,6 +1998,8 @@ int main() {
     runTest("invalid review status", testInvalidReviewStatus);
     runTest("invalid JSON safe diagnostics", testInvalidJsonIsSafe);
     runTest("work-folder initialization layout", testWorkFolderInitializationCreatesValidLayout);
+    runTest("work-folder initialization preserves existing page files",
+            testWorkFolderInitializationPreservesExistingPageFiles);
     runTest("work-folder initialization review defaults",
             testWorkFolderInitializationReviewDefaults);
     runTest("work-folder initialization rejects invalid page count",
@@ -1865,6 +2035,9 @@ int main() {
     runTest("readiness summary counts", testReadinessSummaryCounts);
     runTest("readiness summary validation errors", testReadinessSummaryValidationErrors);
     runTest("readiness summary safe messages", testReadinessSummarySafeMessages);
+    runTest("review state update sets selected source", testReviewStateUpdateSetsSelectedSource);
+    runTest("format json compact round trip", testFormatJsonCompactRoundTrip);
+    runTest("TC-NFR-006 page review sync snapshot", testTnfr006PageReviewSyncSnapshot);
     runTest("validation repair plan repairable findings",
             testValidationRepairPlanRepairableFindings);
     runTest("validation repair plan non-repairable findings",

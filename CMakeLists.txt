@@ -39,12 +39,14 @@ add_library(pdf_text_extractor_core
     src/core/output_config.cpp
     src/core/page_id.cpp
     src/core/page_quality.cpp
+    src/core/page_review_sync.cpp
     src/core/pdf_inspection_poppler.cpp
     src/core/poppler_embedded_text.cpp
     src/core/poppler_page_render.cpp
     src/core/process_runner.cpp
     src/core/readiness_summary.cpp
     src/core/review_state.cpp
+    src/core/review_state_update.cpp
     src/core/review_workflow.cpp
     src/core/reviewed_page_text.cpp
     src/core/source_inventory.cpp

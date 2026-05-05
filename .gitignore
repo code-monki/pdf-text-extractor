@@ -1,0 +1,90 @@
+# Source PDF corpora and local static inputs
+# Copyrighted or otherwise restricted PDFs must stay local unless explicitly approved.
+*.pdf
+!tests/fixtures/
+!tests/fixtures/hello.pdf
+pdfs/
+corpus/
+corpora/
+source-pdfs/
+input-pdfs/
+inputs/pdfs/
+
+# Extraction workspaces and derived full-text artifacts
+work/
+workspace/
+extracted/
+extracted-text/
+page-copy/
+page-text/
+clean-pages/
+normalized-text/
+ocr/
+ocr-cache/
+raw-extraction/
+raw-candidates/
+raw/
+diagnostics/
+reports/extraction/
+
+# Generated indexes, manifests, packages, and distribution outputs
+artifacts/
+build/
+build-qt-shell/
+dist/
+out/
+output/
+outputs/
+package/
+packages/
+release/
+releases/
+search-index.js
+catalog.js
+page-text.js
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Local caches and tool state
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+
+# Operating system noise
+.DS_Store
+.DS_STORE
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+
+# Local-only governance and AI toolkit (not part of distributable application sources)
+AGENTS.md
+ai-toolkit/
+
+# Editor and IDE noise
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*.swn
+*~
+.#*
+\#*\#
+.project
+.classpath
+.settings/

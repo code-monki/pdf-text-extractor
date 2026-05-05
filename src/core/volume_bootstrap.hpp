@@ -34,6 +34,19 @@ struct VolumeBootstrapRequest {
 
     /** When false, stops after work-folder initialization (empty candidates / placeholder diagnostics). */
     bool runCandidateExtraction = true;
+
+    /**
+     * When true, if volume.json already matches this PDF (volumeId, filename, page count), skip
+     * re-initializing the work folder and skip candidate extraction unless reextractWhenResuming
+     * is true. Used by the shell so reopening a PDF does not wipe reviewed page text or re-run
+     * pdftotext. CLI/bootstrap defaults leave this false for explicit full runs.
+     */
+    bool resumeWhenWorkFolderMatches = false;
+    /**
+     * When resumeWhenWorkFolderMatches applies and the folder matches, force extractAllPages even
+     * though extraction would otherwise be skipped on resume (user-requested re-extraction).
+     */
+    bool reextractWhenResuming = false;
 };
 
 /**

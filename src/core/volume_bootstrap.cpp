@@ -5,9 +5,26 @@
 
 #include "core/local_path_intent.hpp"
 #include "core/volume_extraction_pipeline.hpp"
+#include "core/volume_metadata.hpp"
 #include "core/work_folder_initializer.hpp"
 
 namespace pte::core {
+
+namespace {
+
+bool metadataMatchesResume(const VolumeMetadata& meta,
+                           const VolumeBootstrapRequest& request,
+                           int inventoryPageCount) {
+    if (meta.volumeId != request.volumeId) {
+        return false;
+    }
+    if (meta.sourcePageCount != inventoryPageCount) {
+        return false;
+    }
+    return meta.sourceFilename == request.sourcePdfPath.filename().string();
+}
+
+} // namespace
 
 VolumeBootstrapResult VolumeBootstrapService::run(const VolumeBootstrapRequest& request) const {
     VolumeBootstrapResult result;
@@ -55,6 +72,42 @@ VolumeBootstrapResult VolumeBootstrapService::run(const VolumeBootstrapRequest& 
         return result;
     }
     result.pageCount = *inventoryRecord.pageCount;
+
+    if (request.resumeWhenWorkFolderMatches) {
+        const VolumeMetadataResult existing = VolumeMetadataService().loadVolumeMetadata(request.workFolder);
+        if (existing.success && metadataMatchesResume(existing.metadata, request, *inventoryRecord.pageCount)) {
+            result.workFolderInitialized = true;
+            result.success = true;
+            result.inventoryRecorded = true;
+
+            const bool wantExtract =
+                request.runCandidateExtraction && request.reextractWhenResuming;
+            if (!wantExtract) {
+                result.safeMessage = "resumed existing work folder (skipped re-init and extraction)";
+                return result;
+            }
+
+            VolumeCandidateExtractRequest extractRequest;
+            extractRequest.workFolder = request.workFolder;
+            extractRequest.sourcePdfPath = request.sourcePdfPath;
+            extractRequest.volumeId = request.volumeId;
+            extractRequest.pageCount = *inventoryRecord.pageCount;
+            extractRequest.generation = request.generation;
+            extractRequest.tools = request.extractionTools;
+
+            const VolumeCandidateExtractService extractor;
+            const auto extractOutcome = extractor.extractAllPages(extractRequest);
+            if (!extractOutcome.success) {
+                result.success = false;
+                result.safeMessage = extractOutcome.safeMessage;
+                return result;
+            }
+
+            result.extractionCompleted = true;
+            result.safeMessage = "re-ran candidate extraction for existing work folder";
+            return result;
+        }
+    }
 
     WorkFolderInitRequest initRequest;
     initRequest.workFolder = request.workFolder;
