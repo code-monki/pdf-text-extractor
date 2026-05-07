@@ -5,7 +5,8 @@
 // Requirement references: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007,
 // FR-008, FR-009, FR-010, FR-011,
 // FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-022, FR-024, FR-025,
-// FR-021, FR-026, FR-027, FR-029, FR-030, FR-031, FR-032, NFR-001, NFR-002,
+// FR-021, FR-026, FR-027, FR-029, FR-030, FR-031, FR-032, FR-034, FR-035, FR-036,
+// NFR-001, NFR-002,
 // NFR-003, NFR-004, NFR-005, NFR-006, NFR-007, NFR-008, NFR-009, NFR-010, NFR-011, NFR-012,
 // NFR-014.
 // Test references: TC-FR-001, TC-FR-002, TC-FR-003, TC-FR-004, TC-FR-005,
@@ -32,6 +33,7 @@
 #include "core/page_id.hpp"
 #include "core/page_quality.hpp"
 #include "core/page_review_sync.hpp"
+#include "core/pdf_enrichment.hpp"
 #include "core/pdf_inspection_poppler.hpp"
 #include "core/process_runner.hpp"
 #include "core/candidate_generation_poppler.hpp"
@@ -1935,6 +1937,240 @@ void testValidationRepairPlanSafeMessages() {
             "repair plan safe message omits page text");
 }
 
+/** @brief Verifies derived PDF enrichment prototype copies source and writes safe report. */
+void testPdfEnrichmentPrototypeWritesDerivedPdf() {
+    const auto root = makeTempRoot() / "pdf-enrichment-prototype";
+    const auto source = root / "source.pdf";
+    const auto outline = root / "outline-map.json";
+    const auto link = root / "link-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    const auto report = root / "out" / "enrichment-report.json";
+
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(outline, R"JSON({
+  "schemaVersion": 1,
+  "nodes": [
+    {"id": "h1", "title": "Chapter 1", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}, "manual": true},
+    {"id": "h2", "title": "Section 1.1", "level": 2, "destination": {"pageIndex": 1, "yPt": 640}}
+  ]
+})JSON");
+    writeText(link, R"JSON({
+  "schemaVersion": 1,
+  "links": [
+    {"rect": [72, 700, 320, 720], "target": {"type": "intra", "destinationId": "h1"}, "manual": true},
+    {"rect": [72, 660, 320, 680], "target": {"type": "url", "url": "https://example.org"}}
+  ]
+})JSON");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.outlineMapPath = outline;
+    request.linkMapPath = link;
+    request.reportPath = report;
+
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(result.success, "enrichment prototype succeeds");
+    require(result.derivedPdfWritten, "derived PDF written");
+    require(result.outlineNodeCount == 2, "outline node count from sidecar");
+    require(result.linkCount == 2, "link count from sidecar");
+    require(result.manualOverrideCount == 2, "manual override count from sidecars");
+
+    const auto sourceContent = readFile(source);
+    const auto outputContent = readFile(output);
+    require(sourceContent.has_value() && outputContent.has_value(), "source and derived PDF readable");
+    require(sourceContent == outputContent, "prototype derived artifact preserves source bytes");
+
+    const auto reportContent = readFile(report);
+    require(reportContent.has_value(), "enrichment report written");
+    require(reportContent->find("\"outlineNodeCount\":2") != std::string::npos,
+            "report includes outline count");
+    require(reportContent->find("\"linkCount\":2") != std::string::npos, "report includes link count");
+}
+
+/** @brief Verifies enrichment rejects using the source path as output path. */
+void testPdfEnrichmentRejectsInPlaceMutation() {
+    const auto root = makeTempRoot() / "pdf-enrichment-safety";
+    const auto source = root / "source.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = source;
+
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(!result.success, "in-place mutation rejected");
+    require(result.safeMessage.find("must differ") != std::string::npos,
+            "safe error explains distinct output requirement");
+}
+
+/** @brief Verifies invalid link rectangle sidecar fails safely. */
+void testPdfEnrichmentRejectsInvalidLinkRect() {
+    const auto root = makeTempRoot() / "pdf-enrichment-invalid";
+    const auto source = root / "source.pdf";
+    const auto link = root / "link-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(link, R"JSON({
+  "schemaVersion": 1,
+  "links": [
+    {"rect": [1, 2, 3], "target": {"type": "intra", "destinationId": "h1"}}
+  ]
+})JSON");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.linkMapPath = link;
+
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(!result.success, "invalid link rectangle rejected");
+    require(result.safeMessage.find("rect must have four numbers") != std::string::npos,
+            "safe message explains invalid rectangle");
+    require(!fs::exists(output), "no derived PDF produced on invalid map");
+}
+
+/** @brief Verifies schema version enforcement for enrichment sidecars. */
+void testPdfEnrichmentRejectsUnsupportedSchemaVersion() {
+    const auto root = makeTempRoot() / "pdf-enrichment-schema-version";
+    const auto source = root / "source.pdf";
+    const auto outline = root / "outline-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(outline, R"JSON({
+  "schemaVersion": 2,
+  "nodes": [
+    {"id": "h1", "title": "Chapter 1", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}}
+  ]
+})JSON");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.outlineMapPath = outline;
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(!result.success, "unsupported schema rejected");
+    require(result.safeMessage.find("schemaVersion must be 1") != std::string::npos,
+            "safe message states schema version requirement");
+}
+
+/** @brief Verifies intra-document destination IDs are validated against outline IDs. */
+void testPdfEnrichmentRejectsUnknownIntraDestinationId() {
+    const auto root = makeTempRoot() / "pdf-enrichment-destination-registry";
+    const auto source = root / "source.pdf";
+    const auto outline = root / "outline-map.json";
+    const auto link = root / "link-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(outline, R"JSON({
+  "schemaVersion": 1,
+  "nodes": [
+    {"id": "h1", "title": "Chapter 1", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}}
+  ]
+})JSON");
+    writeText(link, R"JSON({
+  "schemaVersion": 1,
+  "links": [
+    {"pageIndex": 0, "rect": [72, 700, 320, 720], "target": {"type": "intra", "destinationId": "missing"}}
+  ]
+})JSON");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.outlineMapPath = outline;
+    request.linkMapPath = link;
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(!result.success, "unknown destination id rejected");
+    require(result.safeMessage.find("destinationId not found") != std::string::npos,
+            "safe message indicates destination registry mismatch");
+}
+
+/** @brief Verifies lint-only mode validates sidecars without writing derived artifacts. */
+void testPdfEnrichmentLintOnly() {
+    const auto root = makeTempRoot() / "pdf-enrichment-lint-only";
+    const auto source = root / "source.pdf";
+    const auto outline = root / "outline-map.json";
+    const auto link = root / "link-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(outline, R"JSON({
+  "schemaVersion": 1,
+  "nodes": [
+    {"id": "intro", "title": "Intro", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}}
+  ]
+})JSON");
+    writeText(link, R"JSON({
+  "schemaVersion": 1,
+  "links": [
+    {"pageIndex": 0, "rect": [72, 700, 320, 720], "target": {"type": "intra", "destinationId": "intro"}}
+  ]
+})JSON");
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.outlineMapPath = outline;
+    request.linkMapPath = link;
+    request.lintOnly = true;
+
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    require(result.success, "lint-only succeeds");
+    require(result.safeMessage.find("lint passed") != std::string::npos,
+            "lint-only safe message");
+    require(!fs::exists(output), "lint-only does not write derived PDF");
+    require(!result.derivedPdfWritten, "lint-only keeps derivedPdfWritten false");
+}
+
+/** @brief Verifies optional Python enrichment path can inject annotations when toolchain is present. */
+void testPdfEnrichmentAnnotationInjectionOptional() {
+    const auto root = makeTempRoot() / "pdf-enrichment-injection";
+    const auto source = root / "source.pdf";
+    const auto outline = root / "outline-map.json";
+    const auto link = root / "link-map.json";
+    const auto output = root / "out" / "source.enriched.pdf";
+    writeText(source, "%PDF-synthetic\nsource-bytes\n");
+    writeText(outline, R"JSON({
+  "schemaVersion": 1,
+  "nodes": [
+    {"id": "h1", "title": "Chapter 1", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}}
+  ]
+})JSON");
+    writeText(link, R"JSON({
+  "schemaVersion": 1,
+  "links": [
+    {"pageIndex": 0, "rect": [72, 700, 320, 720], "target": {"type": "url", "url": "https://example.org"}}
+  ]
+})JSON");
+
+    const fs::path fixtureRoot = fs::path(PTE_TEST_FIXTURE_ROOT);
+    const fs::path repoRoot = fixtureRoot.parent_path().parent_path();
+    const fs::path script = repoRoot / "scripts" / "pdf_enrich_apply.py";
+    if (!fs::exists(script)) {
+        std::cout << "NOTE: skipping optional enrichment injection test (script missing)\n";
+        return;
+    }
+
+    pte::core::PdfEnrichmentRequest request;
+    request.sourcePdfPath = source;
+    request.derivedPdfPath = output;
+    request.outlineMapPath = outline;
+    request.linkMapPath = link;
+    request.enableAnnotationInjection = true;
+    request.pythonScriptPath = script;
+
+    const auto result = pte::core::PdfEnrichmentService().run(request);
+    if (!result.success) {
+        std::cout << "NOTE: skipping optional enrichment injection test (tool unavailable: "
+                  << result.safeMessage << ")\n";
+        return;
+    }
+    require(result.safeMessage.find("annotation injection") != std::string::npos,
+            "annotation injection path used");
+    const auto outputContent = readFile(output);
+    require(outputContent.has_value(), "injection writes derived PDF");
+}
+
 } // namespace
 
 /**
@@ -2044,6 +2280,16 @@ int main() {
             testValidationRepairPlanNonRepairableFindings);
     runTest("validation repair plan does not write", testValidationRepairPlanDoesNotWrite);
     runTest("validation repair plan safe messages", testValidationRepairPlanSafeMessages);
+    runTest("pdf enrichment prototype writes derived PDF", testPdfEnrichmentPrototypeWritesDerivedPdf);
+    runTest("pdf enrichment rejects in-place mutation", testPdfEnrichmentRejectsInPlaceMutation);
+    runTest("pdf enrichment rejects invalid link rect", testPdfEnrichmentRejectsInvalidLinkRect);
+    runTest("pdf enrichment rejects unsupported schema version",
+            testPdfEnrichmentRejectsUnsupportedSchemaVersion);
+    runTest("pdf enrichment rejects unknown intra destination id",
+            testPdfEnrichmentRejectsUnknownIntraDestinationId);
+    runTest("pdf enrichment lint only", testPdfEnrichmentLintOnly);
+    runTest("pdf enrichment optional annotation injection",
+            testPdfEnrichmentAnnotationInjectionOptional);
 
     if (failures != 0) {
         std::cerr << failures << " test assertion(s) failed\n";

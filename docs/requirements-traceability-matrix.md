@@ -2,9 +2,9 @@
 
 Project Name: pdf-text-extractor
 Version: 0.1
-Date (YYYY-MM-DD): 2026-05-04
+Date (YYYY-MM-DD): 2026-05-07
 Maintained By: Codex
-Status: **Implementation (Gate 7) closed** per §9; Packaging / orchestration columns still pending for Gate 8
+Status: Gate 7 closed; **Gate 8 Phase A closed** (2026-05-07); **Gate 9 (Documentation closure) active**; Phase B installers deferred
 Requirement Version Reference: `docs/software-requirements-specification.md` v0.1 (amended 2026-05-04, §17)
 Architecture Version Reference: `docs/high-level-architecture.md` v0.1 approved
 Design Version Reference: `docs/detailed-design.md` v0.1 approved
@@ -29,7 +29,7 @@ Confirm:
 - Advancement to Implementation authorized? Yes
 - **Implementation phase (Gate 7) closed?** Yes (2026-05-04); see §9 and SRS §17
 
-Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation mappings for all FR/NFR rows are complete** (§3). Packaging and orchestration columns remain **Pending** until Gate 8/9 produce artifacts.
+Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 per `docs/phase-gate-record.md`; **Orchestration** columns remain **Pending** until that phase is authorized.
 
 ---
 
@@ -44,9 +44,8 @@ At this phase:
 - detailed design is approved
 - traceability consolidation is complete
 - test planning is approved
-- **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; Packaging (Gate 8) not yet started
-
-Implementation mappings are filled incrementally as code lands. Packaging and Orchestration phases must fill their pending mapping columns when those phases are authorized.
+- **Implementation (Gate 7) is closed** as of 2026-05-04 per §9
+- **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 (`docs/phase-gate-record.md`). §3 **Packaging Ref** still marks many rows **Pending packaging** until Phase B installers; **Phase A** evidence is CPack + `docs/packaging-plan.md` + CI + `pte_enrich` pre-flight (`make enrich-lint`, `scripts/enrich_lint_manifest.sh`).
 
 ---
 
@@ -88,6 +87,9 @@ Implementation mappings are filled incrementally as code lands. Packaging and Or
 | FR-031  | FR       | HLA-OCR, HLA-DIAG, HLA-DEP, HLA-PKG                                  | DD 4.8, 4.11, 4.14, 4.15                   | src/core/readiness_summary.*, src/core/dependency_capability.*; tests/core_tests.cpp                                                                                                                                                                      | TC-FR-031    | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
 | FR-032  | FR       | HLA-APP, HLA-WORK                                                    | DD 4.2, 4.4                                | src/core/reviewed_page_text.*, src/core/file_change_detector.*; tests/core_tests.cpp                                                                                                                                                                      | TC-FR-032    | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
 | FR-033  | FR       | HLA-UI, HLA-THEME                                                    | DD 4.1, 4.17, 5.4, 7                       | src/ui/app_theme.*, src/ui/shell_main_window.*, src/ui/main.cpp; QSettings persistence                                                                                                                                                                    | TC-FR-033    | Pending packaging | Pending orchestration | Implemented slice passing | pte_shell View→Theme; `docs/ui-shell.md` § Theming                                              |
+| FR-034  | FR       | HLA-UI, HLA-PDF, HLA-PKG                                             | DD addendum pending                         | `src/core/pdf_enrichment.*`; `src/cli/enrich_main.cpp`; `docs/enrichment-sidecar-schema.md`; tests/core_tests.cpp                                                                                                                                      | TC-FR-034    | CPack Phase A (`cmake/Packaging.cmake`); `pte_enrich`; `docs/packaging-plan.md` §6; `make enrich-lint`; `scripts/enrich_lint_manifest.sh`; CI fixture job | Pending orchestration | Implemented slice passing | core_tests `testPdfEnrichmentPrototypeWritesDerivedPdf`; derived PDF + outline-map validation   |
+| FR-035  | FR       | HLA-UI, HLA-PDF, HLA-PKG                                             | DD addendum pending                         | `src/core/pdf_enrichment.*` (link-map validation + report); `src/cli/enrich_main.cpp`; tests/core_tests.cpp                                                                                                                                            | TC-FR-035    | (same as FR-034 Phase A packaging) | Pending orchestration | Implemented slice passing | core_tests `testPdfEnrichmentRejectsInvalidLinkRect`; safe link diagnostics path                |
+| FR-036  | FR       | HLA-UI, HLA-WORK, HLA-PKG                                            | DD addendum pending                         | `docs/enrichment-sidecar-schema.md` (`manual` flags); `src/core/pdf_enrichment.*` manual override counts; tests/core_tests.cpp                                                                                                                          | TC-FR-036    | (same as FR-034 Phase A packaging) | Pending orchestration | Implemented slice passing | core_tests manual override count in enrichment report                                           |
 | NFR-001 | NFR      | HLA-INV, HLA-WORK, HLA-CONFIG, HLA-SAFE                              | DD 4.3, 4.4, 4.13, 4.16, 7                 | src/core/local_path_intent.*, src/core/output_config.*, src/core/source_inventory.*, src/core/volume_bootstrap.*, src/ui/review_session_facade.cpp; tests/core_tests.cpp                                                                                  | TC-NFR-001   | Pending packaging | Pending orchestration | Implemented slice passing | Hosted URI scheme rejection; TC-NFR-001 tests; core library has no network client APIs          |
 | NFR-002 | NFR      | HLA-WORK, HLA-CONFIG, HLA-SAFE                                       | DD 4.4, 4.13, 4.16, 7                      | src/core/output_config.*, src/core/artifact_cleanup.*, src/core/work_folder_backup.*; tests/core_tests.cpp                                                                                                                                                | TC-NFR-002   | Pending packaging | Pending orchestration | Implemented slice passing | ctest output_config, backup, cleanup, restore                                                   |
 | NFR-003 | NFR      | HLA-INV, HLA-PDF, HLA-SAFE                                           | DD 4.3, 4.6, 4.16, 7                       | src/core/file_digest.*, src/core/source_inventory.*; tests/core_tests.cpp (TC-NFR-003 hash asserts in Poppler fixture tests)                                                                                                                              | TC-NFR-003   | Pending packaging | Pending orchestration | Implemented slice passing | TC-NFR-003 hash stability (Poppler pipeline + inventory); no source PDF mutation                |
@@ -101,7 +103,7 @@ Implementation mappings are filled incrementally as code lands. Packaging and Or
 | NFR-011 | NFR      | HLA-WORK, HLA-META, HLA-TEXT, HLA-VALID, HLA-CONFIG                  | DD 4.4, 4.5, 4.9, 4.12, 4.13, 5, 7         | src/core/work_folder_initializer.*, src/core/json.*, src/core/work_folder_validator.*; tests/core_tests.cpp                                                                                                                                               | TC-NFR-011   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
 | NFR-012 | NFR      | HLA-OCR, HLA-TEXT, HLA-DIAG, HLA-VALID, HLA-SAFE                     | DD 4.8, 4.9, 4.11, 4.12, 4.16, 7           | src/core/validation_repair.*, src/core/readiness_summary.*, src/core/reviewed_page_text.*, src/core/file_change_detector.*, src/core/work_folder_validator.*; tests/core_tests.cpp                                                                        | TC-NFR-012   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
 | NFR-013 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 7, 9                        | Qt 6 + CMake + portable `src/core/*` / optional `src/ui/*`; full-matrix install smoke deferred to Gate 8 (SRS §17)                                                                                                                                        | TC-NFR-013   | Pending packaging | Pending orchestration | Implemented slice passing | SRS §17 NFR-013; `docs/ui-shell.md` build; `core_tests` + dev host validation                  |
-| NFR-014 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 9                           | src/core/dependency_capability.*; tests/core_tests.cpp                                                                                                                                                                                                    | TC-NFR-014   | Pending packaging | Pending orchestration | Implemented slice passing | ctest core_tests 2026-05-02                                                                     |
+| NFR-014 | NFR      | HLA-DEP, HLA-PKG                                                     | DD 4.14, 4.15, 9                           | src/core/dependency_capability.*; tests/core_tests.cpp                                                                                                                                                                                                    | TC-NFR-014   | `docs/packaging-plan.md`; CPack TGZ/ZIP Phase A (`cmake/Packaging.cmake`); `.github/workflows/ci.yml` (build + tests + enrich manifest lint); Phase B native installers | Pending orchestration | Implemented slice passing | Package smoke: `cmake --build … --target package` → `dist/` archives                                  |
 | NFR-015 | NFR      | HLA-UI, HLA-PKG, HLA-THEME                                           | DD 4.1, 4.15, 4.17, 7                      | `src/ui/shell_main_window.*`, `volume_metadata_dialog.*`, `app_theme.*`, `docs/shell-user-guide.md`; formal WCAG audit per OS deferred (SRS §17)                                                                                                           | TC-NFR-015   | Pending packaging | Pending orchestration | Implemented slice passing | SRS §17 NFR-015; Qt Widgets baseline + themes (FR-033/NFR-016)                                   |
 | NFR-016 | NFR      | HLA-THEME, HLA-UI                                                    | DD 4.1, 4.17, 7                            | src/ui/app_theme.cpp (`validateBuiltInThemesContrastHint`)                                                                                                                                                                                                | TC-NFR-016   | Pending packaging | Pending orchestration | Implemented slice passing | WCAG-style contrast hints + debug warnings; full UX audit backlog                               |
 
@@ -131,9 +133,9 @@ Implementation mappings are filled incrementally as code lands. Packaging and Or
 
 **Authoritative Implementation status for every NFR is §3 (Core Traceability Matrix).** This section previously duplicated NFR rows with a **Status** column that conflicted with §3.
 
-**Packaging / orchestration:** Until Gate 8 is authorized, §3 **Packaging Ref** and **Orchestration Ref** remain `Pending` for all requirements. No separate matrix is maintained here to avoid drift.
+**Packaging / orchestration:** **Gate 8 Phase A** is closed (2026-05-07). §3 **Packaging Ref** for FR-034..036 and **NFR-014** records Phase A evidence (CPack, CI, enrichment lint). **Orchestration Ref** remains `Pending` for requirements until the orchestration phase is authorized. **Phase B** installers remain **Pending** and are not implied by Phase A closure.
 
-**Gate 8 reminder:** NFR-014 and packaged install smoke (full **NFR-013** matrix validation) are validated when packaging artifacts exist per `docs/test-plan.md`.
+**Gate 8 / 9 reminder:** Full **NFR-013** matrix validation on packaged binaries remains incremental with Phase B installers; documentation closure (**Gate 9**) is active per `docs/phase-gate-record.md`.
 
 
 ---
@@ -163,7 +165,7 @@ Current Implementation orphan check:
 - DD HLA component references without approved HLA parent: none known
 - Test case mappings without requirement basis: none known
 - Implementation units without RTM basis: none known
-- Package orphans: not applicable; Packaging phase is not authorized
+- Package orphans: **Phase A** packaging artifacts exist (CPack, `pte_enrich`, scripts); **Phase B** installer-specific package rules remain unmapped until authorized
 
 ---
 
@@ -212,6 +214,9 @@ Current Implementation orphan check:
 | 2026-05-04 | HLA-THEME (`app_theme`): Fusion palettes light/dark/sepia, QSettings `ui/theme`, View→Theme, startup restore; NFR-016 contrast sanity (`validateBuiltInThemesContrastHint`).                                                                                                                      | FR-033, NFR-016                                                                                    | No                      |
 | 2026-05-04 | Operator guide `docs/shell-user-guide.md` (Help→Documentation target); Doxygen `@file`/`@brief` on shell sources (`shell_main_window`, `review_session_facade`, `main`, `app_theme`, `volume_metadata_dialog`); `ui-shell.md` cross-link. Supports future Help menu completion (FR-028, NFR-009). | FR-028, NFR-009, governance                                                                        | No                      |
 | 2026-05-04 | **Gate 7 (Implementation) exit:** SRS §17 Implementation closure amendments; FR-013 Tesseract; NFR-013/NFR-015 split Implementation vs Gate 8 measurement; RTM §3 NFR-013/015 rows; §5 deduplicated; §4 boundary “Planned” rows reconciled to implemented slices where code exists; §9 implementation traceability Yes. | All FR/NFR; OCR-BND-001; governance                                                                | No                      |
+| 2026-05-05 | **Gate 8 Phase A — Packaging:** `docs/packaging-plan.md`; `cmake/Packaging.cmake` (install + CPack TGZ/ZIP → `dist/`); Makefile `package` target; NFR-014 packaging column; Qt `SP_FileDialogInfoView` fix (`shell_main_window.cpp`).                                                                      | NFR-014, NFR-013; FR-028; governance                                                               | No                      |
+| 2026-05-07 | Promote enrichment scope to approved requirements: SRS FR-034/035/036 (derived outline + links + manual fallback); RTM rows and planned test IDs added.                                                                                                                                            | FR-034, FR-035, FR-036; governance                                                                 | No                      |
+| 2026-05-07 | **Gate 8 Phase A exit** — ADR-0006 **Accepted**; `.github/workflows/ci.yml`; `scripts/enrich_lint_manifest.sh` + `tests/fixtures/enrichment/`; `cmake/Packaging.cmake` ships lint script; RTM NFR-014 / FR-034..036 packaging refs; `docs/phase-gate-record.md` Gate 9 active. | ADR-0006; NFR-014; FR-034..036; Gate 8/9 | No                      |
 
 
 ---
@@ -222,10 +227,10 @@ Current Implementation orphan check:
 - 100% NFR coverage to RTM: Yes
 - 100% FR coverage to design: Yes
 - 100% NFR coverage to architecture: Yes
-- 100% implementation traceability: **Yes** (all FR/NFR rows in §3 filled; NFR-013 / NFR-015 use **Implementation-phase** scope per `docs/software-requirements-specification.md` §17)
+- 100% implementation traceability: **Yes** (FR-034 / FR-035 / FR-036 prototype slices implemented and mapped in §3)
 - 100% requirement-to-test coverage: Yes, draft test plan
 - Deterministic-probabilistic boundaries mapped: Yes
-- Packaging traceability complete: No; **Packaging (Gate 8) not authorized**
+- Packaging traceability complete: **Partial** — Phase A + enrichment pre-flight recorded for NFR-014 / FR-034..036; Phase B installer formats (AppImage, deb, rpm, dmg, msi) **pending**
 - Orchestration traceability complete: No; **orchestration phase not authorized**
 - No orphan artifacts: No orphan requirements known in current phase
 
@@ -244,8 +249,8 @@ Current implementation state:
 - HLA component coverage complete through DD: Yes
 - Deterministic-probabilistic boundary coverage complete through DD: Yes
 - Test mappings pending: No; approved Test Plan maps all FR/NFR IDs
-- Implementation mappings pending: **No** (closed 2026-05-04)
-- Packaging/orchestration mappings pending: Yes; **expected** until Gate 8/9 are authorized
+- Implementation mappings pending: **No** (FR-034..036 prototype mappings landed in Gate 8)
+- Packaging/orchestration mappings pending: **Orchestration** columns still **Pending**; **Phase B** packaging formats **Pending**; Phase A packaging rows filled where applicable (NFR-014, FR-034..036)
 
 ---
 

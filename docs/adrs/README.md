@@ -9,5 +9,6 @@ Authoritative index for `pdf-text-extractor`. Per `AGENTS.md`, **Accepted** ADRs
 | [0003](./0003-ocr-probabilistic-boundary.md) | OCR probabilistic boundary (OCR-BND-001) | Accepted |
 | [0004](./0004-presentation-qt-qml-baseline.md) | Native presentation baseline (Qt; QML primary, Widgets fallback) | Accepted |
 | [0005](./0005-pdf-inspection-poppler-family.md) | PDF structural inspection via Poppler-family tools | Accepted |
+| [0006](./0006-pdf-enrichment-derived-output.md) | PDF enrichment as derived output (outline + links) | Accepted |
 
 Supersedes informal duplication: decision log entry DL-001 remains historical context; structural authority for layering is **ADR-0001**.

@@ -85,7 +85,7 @@ void ShellMainWindow::buildUi() {
     fileMenu->addAction(savePageAction_);
 
     editVolumeMetadataAction_ = new QAction(tr("Volume &metadata…"), this);
-    editVolumeMetadataAction_->setIcon(shellStandardIcon(QStyle::SP_FileDialogInfoList));
+    editVolumeMetadataAction_->setIcon(shellStandardIcon(QStyle::SP_FileDialogInfoView));
     editVolumeMetadataAction_->setEnabled(false);
     editVolumeMetadataAction_->setShortcut(QKeySequence(tr("Ctrl+M")));
     editVolumeMetadataAction_->setShortcutContext(Qt::ApplicationShortcut);

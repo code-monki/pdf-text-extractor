@@ -19,6 +19,12 @@
 
 ---
 
+## Packaging
+
+CPack archives that can include `pte_shell` (when built) are described in **`docs/packaging-plan.md`**. Default **`make package`** uses the same `BUILD_DIR` as headless builds unless you configure a Qt-enabled tree separately.
+
+---
+
 ## Building
 
 The default CMake tree (for example `cmake -S . -B build` or `make configure`) sets **`PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL` to OFF**. In that configuration **there is no `pte_shell` target**, so `cmake --build build --target pte_shell` fails with “No rule to make target”. Enable the option (and set **`CMAKE_PREFIX_PATH`** to your Qt 6 kit) to generate the shell target, or use **`make shell QT_PREFIX=…`**, which configures **`SHELL_BUILD_DIR`** (default `build-qt-shell`) with the shell enabled.

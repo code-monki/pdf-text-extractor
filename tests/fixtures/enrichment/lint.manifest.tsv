@@ -1,0 +1,2 @@
+# Fixture manifest for CI and local pre-flight checks (tabs between columns).
+tests/fixtures/hello.pdf	tests/fixtures/enrichment/outline-map.json	tests/fixtures/enrichment/link-map.json

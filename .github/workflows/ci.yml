@@ -1,0 +1,35 @@
+# Continuous integration: build, tests, enrichment lint fixture.
+# NFR-014 Phase A — validates CPack-oriented build tree on Linux hosts.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build and Poppler/Tesseract dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ \
+            poppler-utils tesseract-ocr
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Enrichment manifest lint (fixture)
+        env:
+          PTE_ENRICH: ${{ github.workspace }}/build/pte_enrich
+        run: scripts/enrich_lint_manifest.sh tests/fixtures/enrichment/lint.manifest.tsv

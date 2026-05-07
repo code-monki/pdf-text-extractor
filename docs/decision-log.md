@@ -3,7 +3,114 @@
 Project Name: pdf-text-extractor
 Version / Branch: Documentation baseline
 Maintainer: Chuck, Codex
-RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 7 exit 2026-05-04)
+RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 8 Phase A exit 2026-05-07; Gate 9 active)
+
+---
+
+# Entry ID: DL-013
+
+Date (YYYY-MM-DD): 2026-05-07  
+Lifecycle Phase: Packaging (Gate 8 Phase A) → Documentation (Gate 9)  
+Author: Codex; Chuck (packaging closure directive steps 1–5)
+
+Status: Approved
+
+## 1. Decision Summary
+
+Close **Gate 8 Phase A** from a **technical and traceability** perspective: accept **ADR-0006** (derived PDF enrichment — source immutability preserved), add **CI** (`.github/workflows/ci.yml`) and operator **batch lint** (`scripts/enrich_lint_manifest.sh` + `tests/fixtures/enrichment/`), extend **CPack** install set with the lint script, record **Gate 9** as the active lifecycle focus in `docs/phase-gate-record.md`, and refresh **RTM** packaging references for **NFR-014** / **FR-034..036**.
+
+**Phase B** native installers remain **deferred**; they do not block **Gate 9**.
+
+## 2. Evidence
+
+- `docs/adrs/0006-pdf-enrichment-derived-output.md` (Accepted)  
+- `docs/phase-gate-record.md` (Gate 8 Phase A exit; Gate 9 active)  
+- `.github/workflows/ci.yml`  
+- `scripts/enrich_lint_manifest.sh`; `cmake/Packaging.cmake`  
+- `docs/requirements-traceability-matrix.md` (NFR-014, FR-034..036 **Packaging Ref**)  
+
+---
+
+# Entry ID: DL-012
+
+Date (YYYY-MM-DD): 2026-05-07  
+Lifecycle Phase: Packaging (Gate 8 implementation slice)  
+Author: Codex
+
+Status: Implemented
+
+## 1. Decision Summary
+
+Implement the first derived-PDF enrichment prototype boundary:
+
+- `src/core/pdf_enrichment.*` validates outline/link sidecars, forbids in-place source mutation, writes derived output + safe report.
+- `src/cli/enrich_main.cpp` adds `pte_enrich`.
+- `docs/enrichment-sidecar-schema.md` defines prototype sidecar schema.
+
+## 2. Evidence
+
+- `tests/core_tests.cpp` (`testPdfEnrichmentPrototypeWritesDerivedPdf`, `testPdfEnrichmentRejectsInPlaceMutation`, `testPdfEnrichmentRejectsInvalidLinkRect`)
+- `docs/requirements-traceability-matrix.md` FR-034/035/036 rows
+
+---
+
+# Entry ID: DL-011
+
+Date (YYYY-MM-DD): 2026-05-07  
+Lifecycle Phase: Packaging (Gate 8, requirements expansion)  
+Author: Codex (drafting); Chuck (direction)
+
+Status: Approved
+
+## 1. Decision Summary
+
+Promote enrichment requests into formal SRS requirements: **FR-034** (derived PDF outline), **FR-035** (derived PDF links: intra/inter/url), and **FR-036** (manual fallback for hierarchy/destination/rectangle mapping). Treat these as Gate 8 implementation slices.
+
+## 2. Evidence
+
+- `docs/software-requirements-specification.md` (FR-034..036)
+- `docs/requirements-traceability-matrix.md` (rows + test IDs)
+- `docs/test-plan.md` (TC-FR-034..036)
+
+---
+
+# Entry ID: DL-010
+
+Date (YYYY-MM-DD): 2026-05-07  
+Lifecycle Phase: Packaging (Gate 8, planning extension)  
+Author: Codex (drafting); Chuck (requested direction)
+
+Status: Proposed
+
+## 1. Decision Summary
+
+Propose a new optional capability to generate **derived enriched PDFs** with outline and link annotations (intra-document, inter-document, and URL), while keeping source PDFs unchanged.
+
+## 2. Evidence / draft artifacts
+
+- `docs/adrs/0006-pdf-enrichment-derived-output.md` (Proposed)  
+- `docs/pdf-enrichment-requirements-draft.md` (candidate FRs C-FR-034..036)
+
+---
+
+# Entry ID: DL-009
+
+Date (YYYY-MM-DD): 2026-05-05  
+Lifecycle Phase: Packaging (Gate 8 Phase A)  
+Author: Codex (documentation); Chuck (authorization implied)
+
+Status: Approved
+
+## 1. Decision Summary
+
+Authorize **Gate 8 Phase A**: adopt **`docs/packaging-plan.md`**, CMake **`cmake/Packaging.cmake`** with **CPack** (**TGZ** / **ZIP**) output under **`dist/`**, and **`make package`**. **Phase B** native installers (AppImage, deb, rpm, dmg, msi) remain deferred per packaging plan.
+
+## 2. Evidence
+
+- `docs/packaging-plan.md`  
+- `cmake/Packaging.cmake`  
+- `docs/phase-gate-record.md` Gate 8 section  
+- `docs/requirements-traceability-matrix.md` NFR-014 row  
 
 ---
 

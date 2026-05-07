@@ -673,6 +673,57 @@ The primary stakeholder impact is reducing manual coordination mistakes, exposin
 **Constraints:** Theme support applies to application UI chrome and controls, not source PDF rendering fidelity. Theme preference is not stored in project/work-folder metadata.
 **Notes:** Exact theme names, palettes, and OS-theme integration are deferred to Detailed Design.
 
+## FR-034 Derived PDF Outline Enrichment
+
+**Requirement ID:** FR-034
+**Title:** Generate derived PDF outline hierarchy
+**Description:** The system shall support generating a derived PDF artifact that contains an outline/bookmark hierarchy aligned with the volume table of contents.
+**Acceptance Criteria:**
+
+- The enrichment pipeline can create at least two outline levels (H1/H2-equivalent) in a derived PDF.
+- Each outline node resolves to a valid in-document destination.
+- The source PDF remains unchanged; enriched output is written as a derived artifact.
+- The system supports manual hierarchy overrides for PDFs without reliable semantic heading structure.
+
+**Priority:** High
+**Dependencies:** FR-006, FR-010, FR-028
+**Constraints:** Source PDF bytes must not be modified unless future requirements explicitly authorize in-place mutation.
+**Notes:** Heading hierarchy may be inferred and then curated manually.
+
+## FR-035 Derived PDF Link Annotation Enrichment
+
+**Requirement ID:** FR-035
+**Title:** Inject link annotations for navigation
+**Description:** The system shall support generating link annotations in a derived PDF for in-document, cross-document, and external URL navigation.
+**Acceptance Criteria:**
+
+- The enrichment pipeline can write in-document links that navigate to named destinations or page anchors.
+- The enrichment pipeline can write cross-document links using package-relative or corpus-relative addressing.
+- The enrichment pipeline can write external URL links.
+- Invalid targets are reported in diagnostics and skipped safely without corrupting output.
+
+**Priority:** High
+**Dependencies:** FR-034, FR-028, FR-031
+**Constraints:** Link annotation generation must remain deterministic from supplied mapping inputs.
+**Notes:** Cross-document portability rules are finalized during Packaging phase.
+
+## FR-036 Manual Fallback for Outline and Link Geometry
+
+**Requirement ID:** FR-036
+**Title:** Provide manual fallback editing inputs
+**Description:** The system shall support manual override data for outline hierarchy, destinations, and link rectangle geometry when automatic detection is insufficient.
+**Acceptance Criteria:**
+
+- Operators can supply explicit level assignments and destination bindings for outline nodes.
+- Operators can supply explicit link rectangle coordinates in PDF page space.
+- Override data is saved in local sidecar artifacts and can be re-applied deterministically to regenerate enriched PDFs.
+- Manual fallback usage is reflected in diagnostics.
+
+**Priority:** High
+**Dependencies:** FR-034, FR-035, FR-032
+**Constraints:** Manual override artifacts are local build inputs unless explicitly approved for distribution.
+**Notes:** Legacy Paper Capture PDFs are expected to require this fallback in some cases.
+
 ---
 
 # 5. Non-Functional Requirements (NFRs)
@@ -684,7 +735,7 @@ The primary stakeholder impact is reducing manual coordination mistakes, exposin
 **Description:** The system shall operate through local filesystem paths without requiring application-owned hosted services, network services, remote APIs, or remote databases.
 **Measurement Criteria:** Inventory, extraction, review, validation, and metadata editing can be performed with network access unavailable when source PDFs and work folders reside on locally available storage.
 **Constraints:** External tools may be local dependencies. User-mounted or OS-presented paths backed by SharePoint, Google Drive, Dropbox, NFS, Samba/SMB, or similar sync/network filesystems may be selected if the operating system exposes them as normal filesystem paths, but consistency, locking, latency, offline availability, and sync-conflict behavior are user/environment responsibilities unless later requirements add explicit support.
-**Dependencies:** FR-001 through FR-033
+**Dependencies:** FR-001 through FR-036
 
 ## NFR-002 Source Material Protection
 
@@ -1022,7 +1073,6 @@ Deferred items:
 
 - final native UI framework selection
 - architecture/component decomposition
-- final OCR engine selection
 - final OCR candidate scoring algorithm
 - alternate OCR engine evaluation beyond current evidence
 - broader library-system package/export format

@@ -164,3 +164,31 @@ pte_bootstrap \
 - RTM: `docs/requirements-traceability-matrix.md` (lineage entries for CLI).
 - Related code: `src/core/volume_bootstrap.hpp`, `src/core/volume_extraction_pipeline.hpp`, `src/core/candidate_generation_poppler.hpp`.
 
+---
+
+## Prototype enrichment CLI: `pte_enrich`
+
+Executable: `pte_enrich` (`src/cli/enrich_main.cpp`)  
+Purpose: Gate 8 prototype for FR-034/035/036 sidecar-driven derived PDF enrichment workflow.
+
+### Synopsis
+
+```text
+pte_enrich --source PATH --output-pdf PATH [--outline-map PATH] [--link-map PATH] [--report PATH]
+pte_enrich --source PATH --lint-only [--outline-map PATH] [--link-map PATH]
+pte_enrich {-h|--help}
+```
+
+### Current behavior (prototype)
+
+- validates `outline-map.json` / `link-map.json` structure when provided,
+- rejects in-place source mutation (`--output-pdf` must differ from `--source`),
+- by default attempts bookmark/link annotation injection via Python script `scripts/pdf_enrich_apply.py`
+  (requires local `pikepdf`; use `--prototype-only` to skip injection and emit copy+report only),
+- `--lint-only` validates outline/link sidecars and destination registry consistency without writing a derived PDF,
+- writes a safe `enrichment-report.json`.
+
+Schema reference: `docs/enrichment-sidecar-schema.md`.
+
+Batch pre-flight (many volumes): `scripts/enrich_lint_manifest.sh` — see `docs/packaging-plan.md` §6 and `make enrich-lint-fixtures`.
+

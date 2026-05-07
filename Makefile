@@ -16,6 +16,7 @@ SHELL_BUILD_DIR ?= build-qt-shell
 QT_PREFIX ?=
 BUILD_TYPE ?= Debug
 CTEST_OUTPUT_ON_FAILURE ?= 1
+ENRICH_MANIFEST ?= tests/fixtures/enrichment/lint.manifest.tsv
 
 # `make all` builds the default tree always; when QT_PREFIX is set it also builds pte_shell.
 ALL_DEFAULT_DEPS := build
@@ -41,10 +42,12 @@ help:
 	@printf '  %-14s %s\n' 'shell-go' 'Build pte_shell (needs QT_PREFIX) and launch it.'
 	@printf '  %-14s %s\n' 'test' 'Run the CTest suite with named test output.'
 	@printf '  %-14s %s\n' 'check' 'Run tool-check, configure, build, and test.'
+	@printf '  %-14s %s\n' 'enrich-lint' 'Run pte_enrich --lint-only for one source/map set.'
+	@printf '  %-14s %s\n' 'enrich-lint-fixtures' 'Run scripts/enrich_lint_manifest.sh on tests/fixtures/enrichment/lint.manifest.tsv.'
 	@printf '  %-14s %s\n' 'clean' 'Remove $(BUILD_DIR) and $(SHELL_BUILD_DIR) (full CMake trees).'
 	@printf '  %-14s %s\n' 'distclean' 'clean plus remove dist/package artifact dirs (see target).'
 	@printf '  %-14s %s\n' 'clean-build' 'Run distclean, configure, build, and test.'
-	@printf '  %-14s %s\n' 'package' 'Fail clearly until packaging is formally defined.'
+	@printf '  %-14s %s\n' 'package' 'Run CPack (TGZ/ZIP) into dist/ — see docs/packaging-plan.md.'
 	@printf '%s\n' ''
 	@printf '%s\n' 'Variables:'
 	@printf '  %-14s %s\n' 'BUILD_DIR' 'Build directory, default: build'
@@ -54,6 +57,12 @@ help:
 	@printf '  %-14s %s\n' 'CXX' 'C++ compiler, default: c++'
 	@printf '  %-14s %s\n' 'SHELL_BUILD_DIR' 'Qt shell CMake tree, default: build-qt-shell'
 	@printf '  %-14s %s\n' 'QT_PREFIX' 'Qt 6 CMAKE_PREFIX_PATH (required for shell targets)'
+	@printf '  %-14s %s\n' 'ENRICH_SOURCE' 'Source PDF for make enrich-lint (required).'
+	@printf '  %-14s %s\n' 'ENRICH_OUTLINE_MAP' 'Outline map path for make enrich-lint (optional).'
+	@printf '  %-14s %s\n' 'ENRICH_LINK_MAP' 'Link map path for make enrich-lint (optional).'
+	@printf '  %-14s %s\n' 'ENRICH_PYTHON' 'Python executable override for make enrich-lint (optional).'
+	@printf '  %-14s %s\n' 'ENRICH_SCRIPT' 'Script override for make enrich-lint (optional).'
+	@printf '  %-14s %s\n' 'ENRICH_MANIFEST' 'TSV path for make enrich-lint-fixtures (default: tests/fixtures/enrichment/lint.manifest.tsv).'
 
 .PHONY: tool-check
 tool-check:
@@ -141,6 +150,35 @@ test: build
 .PHONY: check
 check: tool-check configure build test
 
+.PHONY: enrich-lint
+enrich-lint: build
+	@test -n "$(ENRICH_SOURCE)" || { \
+		printf '%s\n' 'ENRICH_SOURCE is required. Example:'; \
+		printf '%s\n' '  make enrich-lint ENRICH_SOURCE=/path/volume.pdf ENRICH_OUTLINE_MAP=/path/outline-map.json ENRICH_LINK_MAP=/path/link-map.json'; \
+		exit 1; \
+	}
+	@test -n "$(ENRICH_OUTLINE_MAP)$(ENRICH_LINK_MAP)" || { \
+		printf '%s\n' 'At least one map is required: ENRICH_OUTLINE_MAP and/or ENRICH_LINK_MAP.'; \
+		exit 1; \
+	}
+	@_cmd='"$(BUILD_DIR)/pte_enrich" --source "$(ENRICH_SOURCE)" --lint-only'; \
+	if [ -n "$(ENRICH_OUTLINE_MAP)" ]; then _cmd="$$_cmd --outline-map \"$(ENRICH_OUTLINE_MAP)\""; fi; \
+	if [ -n "$(ENRICH_LINK_MAP)" ]; then _cmd="$$_cmd --link-map \"$(ENRICH_LINK_MAP)\""; fi; \
+	if [ -n "$(ENRICH_PYTHON)" ]; then _cmd="$$_cmd --python \"$(ENRICH_PYTHON)\""; fi; \
+	if [ -n "$(ENRICH_SCRIPT)" ]; then _cmd="$$_cmd --script \"$(ENRICH_SCRIPT)\""; fi; \
+	eval "$$_cmd"
+
+.PHONY: enrich-lint-fixtures
+enrich-lint-fixtures: build
+	@case "$(ENRICH_MANIFEST)" in \
+	/*) _manifest="$(ENRICH_MANIFEST)";; \
+	*) _manifest="$(CURDIR)/$(ENRICH_MANIFEST)";; \
+	esac; \
+	PTE_ENRICH="$(CURDIR)/$(BUILD_DIR)/pte_enrich" "$(CURDIR)/scripts/enrich_lint_manifest.sh" "$$_manifest"
+
+.PHONY: enrich-lint-manifest
+enrich-lint-manifest: enrich-lint-fixtures
+
 .PHONY: clean
 clean:
 	@rm -rf "$(BUILD_DIR)" "$(SHELL_BUILD_DIR)"
@@ -154,8 +192,6 @@ distclean: clean
 clean-build: distclean configure build test
 
 .PHONY: package
-package:
-	@printf '%s\n' 'Packaging is not defined yet.'
-	@printf '%s\n' 'The Packaging phase must define package formats, dependency bundling,'
-	@printf '%s\n' 'versioning, and validation before this target can produce artifacts.'
-	@exit 2
+package: build
+	@"$(CMAKE)" --build "$(BUILD_DIR)" --target package
+	@printf '%s\n' 'Packaging complete. Archives under dist/ (gitignored). See docs/packaging-plan.md.'

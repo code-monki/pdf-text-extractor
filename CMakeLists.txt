@@ -15,7 +15,8 @@
 # TC-FR-027, TC-FR-029, TC-FR-030, TC-FR-031, TC-NFR-001, TC-NFR-002,
 # TC-NFR-003, TC-NFR-004, TC-NFR-005, TC-NFR-008, TC-NFR-010, TC-NFR-011,
 # TC-FR-032, TC-NFR-007, TC-NFR-012, TC-NFR-014.
-# Constraint: This first slice avoids Qt/UI coupling and implements backend-domain validation only.
+# Packaging: cmake/Packaging.cmake (Gate 8); docs/packaging-plan.md.
+# Constraint: Default configure avoids Qt/UI unless PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL=ON.
 
 cmake_minimum_required(VERSION 3.25)
 
@@ -39,6 +40,7 @@ add_library(pdf_text_extractor_core
     src/core/output_config.cpp
     src/core/page_id.cpp
     src/core/page_quality.cpp
+    src/core/pdf_enrichment.cpp
     src/core/page_review_sync.cpp
     src/core/pdf_inspection_poppler.cpp
     src/core/poppler_embedded_text.cpp
@@ -101,6 +103,21 @@ else()
     target_compile_options(pte_bootstrap PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+add_executable(pte_enrich
+    src/cli/enrich_main.cpp
+)
+
+target_link_libraries(pte_enrich PRIVATE pdf_text_extractor_core)
+target_compile_features(pte_enrich PRIVATE cxx_std_20)
+target_compile_definitions(pte_enrich PRIVATE
+    "PTE_REPO_ROOT=\"${CMAKE_CURRENT_SOURCE_DIR}\"")
+
+if(MSVC)
+    target_compile_options(pte_enrich PRIVATE /W4)
+else()
+    target_compile_options(pte_enrich PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 option(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL "Build Qt Widgets reviewer shell (pte_shell); requires Qt 6.5+" OFF)
 if(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL)
     add_subdirectory(src/ui)
@@ -115,3 +132,6 @@ if(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL)
         COMMAND tc_fr028_probe "$<TARGET_FILE:pte_shell>"
     )
 endif()
+
+# Gate 8 — install rules + CPack (docs/packaging-plan.md).
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Packaging.cmake")

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    {"id": "intro", "title": "Intro", "level": 1, "destination": {"pageIndex": 0, "yPt": 720}}
+  ]
+}

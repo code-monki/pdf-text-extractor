@@ -409,6 +409,9 @@ Operational risk:
 | TC-FR-031      | FR-031                   | Integration/UI      | Missing or present PDF/OCR tools produce capability/version report and actionable errors.                                 |
 | TC-FR-032      | FR-032                   | Unit/System         | External file modification before save is detected and offers reload, overwrite, or cancel.                               |
 | TC-FR-033      | FR-033                   | UI/System           | Theme selection persists per user, applies across work folders, and does not alter extraction artifacts.                  |
+| TC-FR-034      | FR-034                   | Integration/System  | Derived PDF contains H1/H2-equivalent outline nodes mapped to valid in-document destinations; source PDF unchanged.       |
+| TC-FR-035      | FR-035                   | Integration/System  | Derived PDF link annotations support in-document, cross-document, and URL targets; invalid targets are diagnosed safely.  |
+| TC-FR-036      | FR-036                   | UI/Integration      | Manual override sidecars for hierarchy/destination/rectangles are persisted and deterministically reapplied on rebuild.   |
 | TC-NFR-001     | NFR-001                  | System              | Core workflows operate without required network access when files are locally available.                                  |
 | TC-NFR-002     | NFR-002                  | Compliance          | Repository ignore rules and reports prevent source PDFs/full-text derivatives from accidental commit or disclosure.       |
 | TC-NFR-003     | NFR-003                  | Reliability         | Source PDF hash remains unchanged after inventory, extraction, OCR, review, and validation.                               |
@@ -422,7 +425,7 @@ Operational risk:
 | TC-NFR-011     | NFR-011                  | Unit                | Schema versions are present and validation handles known/current schema versions explicitly.                              |
 | TC-NFR-012     | NFR-012                  | Compliance          | Error reports and validation reports omit substantive page text.                                                          |
 | TC-NFR-013     | NFR-013                  | Platform            | Smoke launch and core workflow validation are planned for each supported OS/architecture target.                          |
-| TC-NFR-014     | NFR-014                  | Packaging           | Package artifact target validation is planned for AppImage, `.deb`, `.rpm`, `.dmg`, and `.msi`.                           |
+| TC-NFR-014     | NFR-014                  | Packaging           | **Phase A:** CPack TGZ/ZIP (`cmake/Packaging.cmake`), `make package`, and CI (build + `core_tests` + `scripts/enrich_lint_manifest.sh` fixture). **Phase B:** AppImage, `.deb`, `.rpm`, `.dmg`, and `.msi` remain planned/deferred per `docs/packaging-plan.md` §4.                           |
 | TC-NFR-015     | NFR-015                  | Accessibility       | Core controls have keyboard operation, visible focus, accessible names, and usable target sizing.                         |
 | TC-NFR-016     | NFR-016                  | Accessibility/UI    | Light/default, dark or high-contrast-friendly, and sepia themes preserve contrast, focus, tooltip, and status legibility. |
 | TC-BND-OCR-001 | FR-013, FR-018           | Boundary            | OCR candidates cannot self-authorize accepted status or release eligibility.                                              |
