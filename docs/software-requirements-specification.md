@@ -8,6 +8,8 @@ Status: Approved; amended during DD draft
 Project Primer Version Reference: `docs/pdf-text-extractor-ideation.md` v0.2
 RTM Scaffold Version: `docs/requirements-traceability-matrix.md` v0.1
 
+**Lifecycle position (authoritative):** Gates 1–8 Phase A are closed; **Gate 9 (Documentation closure → release)** is the active open gate; **Packaging Phase B** native installers remain deferred. See `docs/phase-gate-record.md`.
+
 ---
 
 # 1. Requirements Authority Declaration

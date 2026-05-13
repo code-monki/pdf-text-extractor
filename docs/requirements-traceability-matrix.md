@@ -29,7 +29,7 @@ Confirm:
 - Advancement to Implementation authorized? Yes
 - **Implementation phase (Gate 7) closed?** Yes (2026-05-04); see §9 and SRS §17
 
-Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 per `docs/phase-gate-record.md`; **Orchestration** columns remain **Pending** until that phase is authorized.
+Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 per `docs/phase-gate-record.md`; **Gate 9 (Documentation closure)** is the **active** lifecycle focus; **Packaging Phase B** installers remain **deferred** and do not block Gate 9. **Orchestration** columns remain **Pending** until that phase is authorized.
 
 ---
 
@@ -46,6 +46,7 @@ At this phase:
 - test planning is approved
 - **Implementation (Gate 7) is closed** as of 2026-05-04 per §9
 - **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 (`docs/phase-gate-record.md`). §3 **Packaging Ref** still marks many rows **Pending packaging** until Phase B installers; **Phase A** evidence is CPack + `docs/packaging-plan.md` + CI + `pte_enrich` pre-flight (`make enrich-lint`, `scripts/enrich_lint_manifest.sh`).
+- **Gate 9 (Documentation closure)** is the **active** authorized lifecycle focus per `docs/phase-gate-record.md` (release notes alignment, operator doc completeness vs SRS, etc.); **Phase B** installers remain deferred and do not block Gate 9.
 
 ---
 
@@ -142,9 +143,9 @@ At this phase:
 
 # 6. Bidirectional Verification Rules
 
-Forward and backward tracing is complete through approved Detailed Design and approved Test Planning. Implementation tracing is now incremental. Full lifecycle tracing cannot be completed until Implementation, Packaging, and Orchestration phases produce approved artifacts.
+Forward and backward tracing is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) and Packaging Phase A (Gate 8)** are closed per `docs/phase-gate-record.md`; RTM maintenance continues under **Gate 9** (documentation closure). Full lifecycle completion for **Packaging Ref** / **Orchestration Ref** columns still requires **Packaging Phase B** (native installers, when separately authorized) and **Orchestration** artifacts.
 
-Current rule for Implementation phase:
+Current rule for Implementation mappings (Gate 7 closed; rules still govern RTM maintenance):
 
 - Every approved FR and NFR must appear in this RTM.
 - Every approved FR and NFR must map to at least one HLA component, one DD reference, and one Test Case ID.

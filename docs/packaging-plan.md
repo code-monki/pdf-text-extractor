@@ -7,6 +7,7 @@
 | SRS | NFR-014; constraints §7 |
 | RTM | `docs/requirements-traceability-matrix.md` Packaging Ref column |
 | Outputs | `dist/` (gitignored) — CPack **TGZ** and **ZIP** archives |
+| Phase Gate | Gate 8 Phase A **closed** (2026-05-07); **Gate 9** (documentation closure) **active**; **Phase B** installers **deferred** — `docs/phase-gate-record.md` |
 
 ---
 
@@ -139,7 +140,7 @@ This lint path validates sidecar schema/version, rectangle geometry, and destina
 
 ## 8. Gate 8 exit criteria (project owner)
 
-Phase A satisfies **“approved packaging plan exists”** + **artifact formats produced** (TGZ/ZIP). Closing **Gate 8 → Documentation closure (Gate 9)** may additionally require Phase B milestones per owner approval — record in **`docs/phase-gate-record.md`**.
+Phase A satisfies **“approved packaging plan exists”** + **artifact formats produced** (TGZ/ZIP). **Gate 8 Phase A → Gate 9** (documentation closure) is authorized **without** Phase B native installers; Phase B remains **deferred** and does not block Gate 9 per **`docs/phase-gate-record.md`**. Any future Phase B kickoff requires separate owner approval and plan updates.
 
 ---
 

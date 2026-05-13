@@ -9,6 +9,8 @@ Architecture Version Reference: `docs/high-level-architecture.md` v0.1 approved
 Requirement Version Reference: `docs/software-requirements-specification.md` v0.1 approved
 RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1
 
+**Lifecycle position (authoritative):** Gates 1–8 Phase A are closed; **Gate 9 (Documentation closure)** is active; **Packaging Phase B** installers deferred. See `docs/phase-gate-record.md`.
+
 ---
 
 # 1. Design Authority Declaration

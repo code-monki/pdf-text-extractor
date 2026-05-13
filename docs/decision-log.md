@@ -5,6 +5,8 @@ Version / Branch: Documentation baseline
 Maintainer: Chuck, Codex
 RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 8 Phase A exit 2026-05-07; Gate 9 active)
 
+**Lifecycle position (authoritative):** Gate 9 (Documentation closure) open; Gates 1–8 Phase A closed; Phase B native installers deferred — `docs/phase-gate-record.md`.
+
 ---
 
 # Entry ID: DL-013
