@@ -29,7 +29,7 @@ CMake **install rules** + **CPack** (`cmake/Packaging.cmake`) lay out:
 | Core library | `lib/` (`libpdf_text_extractor_core.a` static on typical Unix static link context; shared/DLL layout on platforms that build shared) | same |
 | `pte_shell` | — | macOS: `pte_shell.app` bundle at archive root; other OS: `bin/pte_shell` |
 
-**Version string:** `project(... VERSION 0.1.0)` in root `CMakeLists.txt` — bumps propagate to archive names.
+**Version string:** `project(... VERSION 0.1.0)` in root `CMakeLists.txt` — bumps propagate to archive names. User-visible release notes: `CHANGELOG.md` (keep in sync when bumping the CMake project version).
 
 **Archive naming:** `pdf-text-extractor-<version>-<CMAKE_SYSTEM_NAME>-<processor>.{tar.gz,zip}`
 

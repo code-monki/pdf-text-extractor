@@ -2,7 +2,7 @@
 
 | Audience | Operators using the Qt Widgets reviewer (`pte_shell`) |
 |----------|------------------------------------------------------|
-| Related docs | [UI shell (developer)](ui-shell.md) — build, CMake, theming, architecture |
+| Related docs | [UI shell (developer)](ui-shell.md) — build, CMake, theming, architecture; [CLI reference](cli-reference.md) (`pte_bootstrap`, `pte_enrich`); [Documentation index](README.md); [Integration tutorial](integration-tutorial.md) (embedding `pdf_text_extractor_core`, optional `pte_demo_app`) |
 | Help menu (planned) | **Documentation** should open this file (bundled or repo copy); **About** should show version and credits (see [§ Planned Help integration](#planned-help-integration)). |
 
 ---

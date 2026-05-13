@@ -1,12 +1,13 @@
 # Software Requirements Specification (SRS)
 
 Project Name: pdf-text-extractor
-Version: 0.1
+Version: 0.1.0
 Date (YYYY-MM-DD): 2026-05-01 (amended 2026-05-04 — Implementation closure scope; see §17)
 Author(s): Chuck, Codex
 Status: Approved; amended during DD draft
 Project Primer Version Reference: `docs/pdf-text-extractor-ideation.md` v0.2
 RTM Scaffold Version: `docs/requirements-traceability-matrix.md` v0.1
+Release notes / packaged version string: `CHANGELOG.md`; authoritative CMake version is `project(pdf_text_extractor VERSION …)` in root `CMakeLists.txt` (must match this SRS **Version** field at release documentation closure).
 
 **Lifecycle position (authoritative):** Gates 1–8 Phase A are closed; **Gate 9 (Documentation closure → release)** is the active open gate; **Packaging Phase B** native installers remain deferred. See `docs/phase-gate-record.md`.
 

@@ -1,11 +1,34 @@
 # Decision Log
 
 Project Name: pdf-text-extractor
-Version / Branch: Documentation baseline
+Version / Branch: Documentation baseline (Gate 9 closure work in progress; slice 2026-05-13)
 Maintainer: Chuck, Codex
 RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 8 Phase A exit 2026-05-07; Gate 9 active)
 
 **Lifecycle position (authoritative):** Gate 9 (Documentation closure) open; Gates 1–8 Phase A closed; Phase B native installers deferred — `docs/phase-gate-record.md`.
+
+---
+
+# Entry ID: DL-014
+
+Date (YYYY-MM-DD): 2026-05-13  
+Lifecycle Phase: Documentation closure (Gate 9, non-packaging slice)  
+Author: Codex (agent); Chuck (repository owner)
+
+Status: Recorded
+
+## 1. Decision Summary
+
+Advance **Gate 9** documentation closure **without** Packaging Phase B work: add **`CHANGELOG.md`** aligned to CMake **0.1.0**; add **`docs/README.md`** and root **`README.md`** as documentation entry points; align SRS version metadata and packaging doc cross-reference; cross-link operator and integrator docs (**`pte_demo_app`**, **`PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP`**, **`integration-tutorial.md`**). Update **`docs/phase-gate-record.md`** Gate 9 open-work list to reflect completed vs deferred items.
+
+**Phase B** installers, signing, and CPack matrix expansion remain **deferred**; no change to install rules or CPack configuration in this slice.
+
+## 2. Evidence
+
+- `CHANGELOG.md`; `README.md`; `docs/README.md`
+- `docs/software-requirements-specification.md` (Version **0.1.0** + release-notes pointer)
+- `docs/cli-reference.md`, `docs/shell-user-guide.md`, `docs/ui-shell.md`, `docs/integration-tutorial.md`, `docs/packaging-plan.md`
+- `docs/phase-gate-record.md` (Gate 9 open work refresh)
 
 ---
 

@@ -2,7 +2,7 @@
 
 Project: pdf-text-extractor  
 Checklist authority: Local lifecycle checklist aligned with project governance  
-Last updated: 2026-05-07
+Last updated: 2026-05-13
 
 This record summarizes **recorded satisfaction** of mandatory exit criteria and **advancement authorization** for phases completed to date. Advancement requires **explicit human approval**; signatures appear below where recorded.
 
@@ -89,9 +89,10 @@ The `pte_bootstrap` executable implements local volume bootstrap (inventory → 
 
 **Open work (indicative):**
 
-- Release notes / changelog alignment with packaged version (`project(... VERSION …)` in CMake).
-- Operator docs completeness vs SRS (CLI reference, shell user guide, packaging plan, enrichment schema).
-- Optional: downstream orchestration docs remain **out of scope** until orchestration phase is authorized.
+- **Release notes / changelog (done 2026-05-13):** `CHANGELOG.md` added at repository root; SRS **Version** and packaging doc cross-references aligned to **0.1.0** with `project(pdf_text_extractor VERSION 0.1.0)` in root `CMakeLists.txt`.
+- **Operator / integrator doc surfacing (done 2026-05-13):** `docs/README.md` documentation index; root `README.md` entry point; cross-links among `docs/cli-reference.md`, `docs/shell-user-guide.md`, `docs/ui-shell.md`, and `docs/integration-tutorial.md` (including **`PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP`** / **`pte_demo_app`**).
+- **Remaining before Gate 9 → Final / release sign-off:** explicit human approval per `ai-toolkit/02-governance/12-phase-gate-checklist.md`; any further SRS-vs-docs spot checks the project owner wants (no open “stub” release-notes file beyond `CHANGELOG.md`).
+- **Still out of scope:** downstream orchestration docs until orchestration phase is authorized; **Packaging Phase B** installers, signing, CPack matrix expansion (deferred per above).
 
 **Next decision:** **Phase B** native installers remain **deferred** and do not block Gate 9; record separate approval if Phase B is kicked off.
 

@@ -9,6 +9,8 @@
 | CMake option | `PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL=ON` (default **OFF** so core library and tests build without Qt) |
 | Typography | `main.cpp` sets **`QFontDatabase::systemFont(QFontDatabase::GeneralFont)`** so controls use the OS UI font (e.g. SF on macOS), not Fusion’s generic default |
 
+**Library integrators (no Qt):** to build the optional C++ demo binary **`pte_demo_app`** that links `pdf_text_extractor_core`, set **`PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP=ON`** (default OFF). Walkthrough: **[integration-tutorial.md](integration-tutorial.md)**; documentation index: **[README.md](README.md)**.
+
 ---
 
 ## Visual guidance: mockup vs wireframe

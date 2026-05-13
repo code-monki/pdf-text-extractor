@@ -3,11 +3,12 @@
 
 | Field          | Value                                                                                                             |
 | -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Status         | Active (implementation phase)                                                                                     |
+| Status         | Active — operator reference (aligned with Gate 9 documentation closure)                                         |
 | Date           | 2026-05-03                                                                                                        |
 | Executable     | `pte_bootstrap` (CMake target; built beside `core_tests`)                                                         |
 | Implementation | `src/cli/bootstrap_main.cpp`                                                                                      |
 | Domain service | `pte::core::VolumeBootstrapService` (`docs` artifact: behavior described under volume bootstrap / FR-004, FR-024) |
+| See also       | [Documentation index](README.md); [Integration tutorial](integration-tutorial.md) (`pte_demo_app`, `PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP`); [UI shell build](ui-shell.md) (`pte_shell`) |
 
 
 This document is the **operator-facing catalog** of command-line switches. When in doubt, switches must match the parser in `src/cli/bootstrap_main.cpp`.
@@ -31,6 +32,8 @@ cmake --build <build-dir> --target pte_bootstrap
 ```
 
 Typical binary path: `<build-dir>/pte_bootstrap`.
+
+Other binaries (separate CMake options / targets): optional Qt reviewer **`pte_shell`** (`PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL`, default OFF) — [ui-shell.md](ui-shell.md); optional in-process demo **`pte_demo_app`** (`PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP`, default OFF) — [integration-tutorial.md](integration-tutorial.md). Enrichment CLI **`pte_enrich`** is built by default with the headless tree; see [below](#prototype-enrichment-cli-pte_enrich).
 
 ---
 
