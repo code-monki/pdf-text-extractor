@@ -133,5 +133,13 @@ if(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL)
     )
 endif()
 
+# Integration demo target; see docs/integration-tutorial.md.
+# Default OFF mirrors PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL so default/CI builds stay light.
+option(PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP
+    "Build the integration demo (pte_demo_app) under examples/demo_app/" OFF)
+if(PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP)
+    add_subdirectory(examples/demo_app)
+endif()
+
 # Gate 8 — install rules + CPack (docs/packaging-plan.md).
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Packaging.cmake")

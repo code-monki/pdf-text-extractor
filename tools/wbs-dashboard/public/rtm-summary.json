@@ -1,0 +1,22 @@
+{
+  "source": "docs/requirements-traceability-matrix.md",
+  "lastReviewed": "2026-05-13",
+  "note": "Counts and ID ranges mirror the RTM requirement tables. After RTM edits, update counts/ranges here and in docs/phase-gate-record.md cross-checks as needed.",
+  "functionalRequirements": {
+    "count": 36,
+    "idPrefix": "FR",
+    "idStart": 1,
+    "idEnd": 36,
+    "implementationStatus": "done",
+    "owner": "RTM"
+  },
+  "nonFunctionalRequirements": {
+    "count": 16,
+    "idPrefix": "NFR",
+    "idStart": 1,
+    "idEnd": 16,
+    "implementationStatus": "done",
+    "owner": "RTM"
+  },
+  "packagingColumnNote": "RTM packaging lifecycle column remains pending for Phase B scope; does not block Gate 9 documentation closure per phase-gate-record."
+}

@@ -19,3 +19,7 @@ Format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Packaging (Phase A):** Portable **TGZ/ZIP** via CPack; see `docs/packaging-plan.md`. **Phase B** native installers (`.deb`, `.rpm`, `.dmg`, `.msi`, signing, expanded CI matrix) remain **deferred** per `docs/phase-gate-record.md`.
 - **Headless CLI:** `pte_bootstrap` — `docs/cli-reference.md`.
 - **Enrichment prototype:** `pte_enrich`, sidecar schema — `docs/cli-reference.md` (bottom), `docs/enrichment-sidecar-schema.md`.
+
+### Verified (2026-05-29)
+
+- Primary dev host: `make check`, `make enrich-lint-fixtures`, `pte_shell` Release build + `tc_fr028_probe` (Gate 9 exit).

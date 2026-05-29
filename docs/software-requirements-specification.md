@@ -9,7 +9,7 @@ Project Primer Version Reference: `docs/pdf-text-extractor-ideation.md` v0.2
 RTM Scaffold Version: `docs/requirements-traceability-matrix.md` v0.1
 Release notes / packaged version string: `CHANGELOG.md`; authoritative CMake version is `project(pdf_text_extractor VERSION …)` in root `CMakeLists.txt` (must match this SRS **Version** field at release documentation closure).
 
-**Lifecycle position (authoritative):** Gates 1–8 Phase A are closed; **Gate 9 (Documentation closure → release)** is the active open gate; **Packaging Phase B** native installers remain deferred. See `docs/phase-gate-record.md`.
+**Lifecycle position (authoritative):** Gates 1–9 (documentation closure) are **closed** (2026-05-29). **Packaging Phase B** native installers and orchestration remain **deferred**. See `docs/phase-gate-record.md`.
 
 ---
 

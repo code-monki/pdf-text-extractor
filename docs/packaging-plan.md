@@ -7,7 +7,7 @@
 | SRS | NFR-014; constraints §7 |
 | RTM | `docs/requirements-traceability-matrix.md` Packaging Ref column |
 | Outputs | `dist/` (gitignored) — CPack **TGZ** and **ZIP** archives |
-| Phase Gate | Gate 8 Phase A **closed** (2026-05-07); **Gate 9** (documentation closure) **active**; **Phase B** installers **deferred** — `docs/phase-gate-record.md` |
+| Phase Gate | Gate 8 Phase A **closed** (2026-05-07); **Gate 9 closed** (2026-05-29); **Phase B** installers **deferred** — `docs/phase-gate-record.md` |
 
 ---
 

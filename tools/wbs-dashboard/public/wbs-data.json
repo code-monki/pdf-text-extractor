@@ -1,0 +1,187 @@
+{
+  "meta": {
+    "title": "pdf-text-extractor — work breakdown",
+    "sourceDocs": [
+      "docs/phase-gate-record.md (gates and Gate 9 open work)",
+      "AGENTS.md (authorized lifecycle scope)"
+    ],
+    "lastReviewed": "2026-05-13",
+    "criticalPathHint": "Release sign-off is blocked on Gate 9 explicit human approval (phase-gate checklist). Packaging Phase B native installers and orchestration documentation are deferred and are not on the Gate 9 critical path."
+  },
+  "roots": [
+    {
+      "id": "lifecycle",
+      "name": "Lifecycle & phase gates",
+      "status": "in-progress",
+      "owner": "PM",
+      "children": [
+        {
+          "id": "gates-closed",
+          "name": "Gates 1–8 Phase A (recorded closed)",
+          "status": "done",
+          "owner": "PM",
+          "children": [
+            {
+              "id": "g1-2",
+              "name": "Gate 1→2 Ideation → Requirements",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g2-3",
+              "name": "Gate 2→3 Requirements → Architecture",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g3-4",
+              "name": "Gate 3→4 Architecture → Detailed Design",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g4-5",
+              "name": "Gate 4→5 Detailed Design → Traceability",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g5-6",
+              "name": "Gate 5→6 Traceability → Test Planning",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g6-7",
+              "name": "Gate 6→7 Test Planning → Implementation",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g7-8",
+              "name": "Gate 7→8 Implementation → Packaging",
+              "status": "done",
+              "owner": "PM"
+            },
+            {
+              "id": "g8a",
+              "name": "Gate 8 Phase A (CPack TGZ/ZIP, CI, enrichment pre-flight)",
+              "status": "done",
+              "owner": "Build"
+            }
+          ]
+        },
+        {
+          "id": "gate-9",
+          "name": "Gate 9 — Documentation closure → release (active)",
+          "status": "in-progress",
+          "owner": "PM",
+          "children": [
+            {
+              "id": "g9-changelog",
+              "name": "CHANGELOG / version alignment with CMake project()",
+              "status": "done",
+              "owner": "Docs"
+            },
+            {
+              "id": "g9-doc-surface",
+              "name": "Operator & integrator documentation surfacing (indexes, cross-links)",
+              "status": "done",
+              "owner": "Docs"
+            },
+            {
+              "id": "g9-srs-spot",
+              "name": "Optional SRS-vs-docs spot checks (owner-directed)",
+              "status": "in-progress",
+              "owner": "Chuck"
+            },
+            {
+              "id": "g9-checklist-approval",
+              "name": "Explicit human approval (phase-gate checklist)",
+              "status": "blocked",
+              "owner": "Chuck",
+              "notes": "Authoritative gate per docs/phase-gate-record.md"
+            }
+          ]
+        },
+        {
+          "id": "final-release",
+          "name": "Final / release sign-off (post–Gate 9)",
+          "status": "blocked",
+          "owner": "PM",
+          "notes": "Blocked until Gate 9 closes"
+        }
+      ]
+    },
+    {
+      "id": "engineering",
+      "name": "Engineering workstreams",
+      "status": "in-progress",
+      "owner": "Eng",
+      "children": [
+        {
+          "id": "core-extraction",
+          "name": "Core extraction & normalization (Poppler, OCR routing, work-folder)",
+          "status": "done",
+          "owner": "Eng",
+          "notes": "Implementation gate closed; maintain for regressions"
+        },
+        {
+          "id": "enrichment",
+          "name": "Derived-PDF enrichment prototype (pte_enrich, sidecars, lint)",
+          "status": "done",
+          "owner": "Eng"
+        },
+        {
+          "id": "qt-shell",
+          "name": "Optional Qt reviewer shell (pte_shell)",
+          "status": "done",
+          "owner": "Eng",
+          "notes": "CMake-gated; see docs/ui-shell.md"
+        },
+        {
+          "id": "demo-app",
+          "name": "Optional in-process demo (pte_demo_app)",
+          "status": "done",
+          "owner": "Eng",
+          "notes": "PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP; see docs/integration-tutorial.md"
+        },
+        {
+          "id": "ci",
+          "name": "CI — build, core_tests, enrichment manifest lint",
+          "status": "done",
+          "owner": "Eng",
+          "notes": ".github/workflows/ci.yml"
+        }
+      ]
+    },
+    {
+      "id": "deferred-packaging-b",
+      "name": "Packaging Phase B (deferred)",
+      "status": "deferred",
+      "owner": "Build",
+      "children": [
+        {
+          "id": "pb-installers",
+          "name": "Native installers (AppImage, deb, rpm, dmg, msi)",
+          "status": "deferred",
+          "owner": "Build"
+        },
+        {
+          "id": "pb-signing",
+          "name": "Signing & expanded CPack / CI matrix",
+          "status": "deferred",
+          "owner": "Build",
+          "notes": "docs/packaging-plan.md"
+        }
+      ]
+    },
+    {
+      "id": "deferred-orchestration",
+      "name": "Orchestration documentation & automation (deferred)",
+      "status": "deferred",
+      "owner": "PM",
+      "notes": "Out of scope until separately authorized (phase-gate-record, AGENTS.md)"
+    }
+  ]
+}

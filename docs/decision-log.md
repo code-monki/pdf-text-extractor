@@ -1,11 +1,31 @@
 # Decision Log
 
 Project Name: pdf-text-extractor
-Version / Branch: Documentation baseline (Gate 9 closure work in progress; slice 2026-05-13)
+Version / Branch: Documentation baseline (Gate 9 closed 2026-05-29)
 Maintainer: Chuck, Codex
-RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 8 Phase A exit 2026-05-07; Gate 9 active)
+RTM Version Reference: `docs/requirements-traceability-matrix.md` v0.1 (Gate 9 exit 2026-05-29)
 
-**Lifecycle position (authoritative):** Gate 9 (Documentation closure) open; Gates 1–8 Phase A closed; Phase B native installers deferred — `docs/phase-gate-record.md`.
+**Lifecycle position (authoritative):** Gates 1–9 closed (2026-05-29); Phase B native installers and orchestration deferred — `docs/phase-gate-record.md`.
+
+---
+
+# Entry ID: DL-015
+
+Date (YYYY-MM-DD): 2026-05-29  
+Lifecycle Phase: Documentation closure (Gate 9 exit)  
+Author: Codex; Chuck (directive: tasks 1–3 before PDFDocumentView integration)
+
+Status: Approved
+
+## 1. Decision Summary
+
+Close **Gate 9** after primary-host verification (`make check`, `make enrich-lint-fixtures`, **`pte_shell`** Release build, **`tc_fr028_probe`**) and commit remaining Gate 9 artifacts: **`PDF_TEXT_EXTRACTOR_BUILD_DEMO_APP`**, **`examples/demo_app/`**, **`tools/wbs-dashboard/`**. **Packaging Phase B** and orchestration remain deferred.
+
+## 2. Evidence
+
+- `docs/phase-gate-record.md` (Gate 9 exit recorded 2026-05-29)  
+- `CHANGELOG.md` (Verified 2026-05-29 section)  
+- Verification: 2026-05-29 dev host build/test/shell smoke  
 
 ---
 

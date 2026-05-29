@@ -2,7 +2,7 @@
 
 **Project version** (build / CPack): **0.1.0** — see root `CMakeLists.txt` (`project(pdf_text_extractor VERSION …)`). User-facing release notes: [`CHANGELOG.md`](../CHANGELOG.md) in the repository root.
 
-**Lifecycle:** Gates 1–8 Phase A closed; **Gate 9** (documentation closure) and deferred **Packaging Phase B** — [`phase-gate-record.md`](phase-gate-record.md).
+**Lifecycle:** Gates 1–9 closed (2026-05-29); deferred **Packaging Phase B** and orchestration — [`phase-gate-record.md`](phase-gate-record.md).
 
 ---
 

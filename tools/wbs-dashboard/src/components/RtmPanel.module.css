@@ -1,0 +1,38 @@
+.intro {
+  font-size: 0.88rem;
+  color: #334155;
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.intro code {
+  font-size: 0.8rem;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.note {
+  font-size: 0.82rem;
+  color: #475569;
+  margin: 0 0 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #94a3b8;
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: baseline;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.meta {
+  font-size: 0.78rem;
+  color: #64748b;
+}

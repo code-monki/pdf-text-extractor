@@ -2,9 +2,9 @@
 
 Project Name: pdf-text-extractor
 Version: 0.1
-Date (YYYY-MM-DD): 2026-05-07
+Date (YYYY-MM-DD): 2026-05-29
 Maintained By: Codex
-Status: Gate 7 closed; **Gate 8 Phase A closed** (2026-05-07); **Gate 9 (Documentation closure) active**; Phase B installers deferred
+Status: Gates 1–9 closed (2026-05-29); **Packaging Phase B** installers and orchestration deferred
 Requirement Version Reference: `docs/software-requirements-specification.md` v0.1 (amended 2026-05-04, §17)
 Architecture Version Reference: `docs/high-level-architecture.md` v0.1 approved
 Design Version Reference: `docs/detailed-design.md` v0.1 approved
@@ -29,7 +29,7 @@ Confirm:
 - Advancement to Implementation authorized? Yes
 - **Implementation phase (Gate 7) closed?** Yes (2026-05-04); see §9 and SRS §17
 
-Traceability is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) is closed** as of 2026-05-04 per §9; **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 per `docs/phase-gate-record.md`; **Gate 9 (Documentation closure)** is the **active** lifecycle focus; **Packaging Phase B** installers remain **deferred** and do not block Gate 9. **Orchestration** columns remain **Pending** until that phase is authorized.
+Traceability is complete through approved Detailed Design and approved Test Planning. **Gates 1–9 are closed** as of 2026-05-29 per `docs/phase-gate-record.md`. **Packaging Phase B** installers and **Orchestration** columns remain **Pending** until those phases are separately authorized.
 
 ---
 
@@ -44,9 +44,7 @@ At this phase:
 - detailed design is approved
 - traceability consolidation is complete
 - test planning is approved
-- **Implementation (Gate 7) is closed** as of 2026-05-04 per §9
-- **Packaging Phase A (Gate 8) is closed** as of 2026-05-07 (`docs/phase-gate-record.md`). §3 **Packaging Ref** still marks many rows **Pending packaging** until Phase B installers; **Phase A** evidence is CPack + `docs/packaging-plan.md` + CI + `pte_enrich` pre-flight (`make enrich-lint`, `scripts/enrich_lint_manifest.sh`).
-- **Gate 9 (Documentation closure)** is the **active** authorized lifecycle focus per `docs/phase-gate-record.md` (release notes alignment, operator doc completeness vs SRS, etc.); **Phase B** installers remain deferred and do not block Gate 9.
+- **Gates 1–9 are closed** as of 2026-05-29 (`docs/phase-gate-record.md`). §3 **Packaging Ref** still marks many rows **Pending packaging** until Phase B installers; **Phase A** evidence is CPack + `docs/packaging-plan.md` + CI + `pte_enrich` pre-flight.
 
 ---
 
@@ -136,14 +134,14 @@ At this phase:
 
 **Packaging / orchestration:** **Gate 8 Phase A** is closed (2026-05-07). §3 **Packaging Ref** for FR-034..036 and **NFR-014** records Phase A evidence (CPack, CI, enrichment lint). **Orchestration Ref** remains `Pending` for requirements until the orchestration phase is authorized. **Phase B** installers remain **Pending** and are not implied by Phase A closure.
 
-**Gate 8 / 9 reminder:** Full **NFR-013** matrix validation on packaged binaries remains incremental with Phase B installers; documentation closure (**Gate 9**) is active per `docs/phase-gate-record.md`.
+**Gate 8 / 9 reminder:** Full **NFR-013** matrix validation on packaged binaries remains incremental with Phase B installers. **Gate 9 (documentation closure)** is **closed** (2026-05-29) per `docs/phase-gate-record.md`.
 
 
 ---
 
 # 6. Bidirectional Verification Rules
 
-Forward and backward tracing is complete through approved Detailed Design and approved Test Planning. **Implementation (Gate 7) and Packaging Phase A (Gate 8)** are closed per `docs/phase-gate-record.md`; RTM maintenance continues under **Gate 9** (documentation closure). Full lifecycle completion for **Packaging Ref** / **Orchestration Ref** columns still requires **Packaging Phase B** (native installers, when separately authorized) and **Orchestration** artifacts.
+Forward and backward tracing is complete through approved Detailed Design and approved Test Planning. **Gates 1–9** are closed per `docs/phase-gate-record.md`. Full lifecycle completion for **Packaging Ref** / **Orchestration Ref** columns still requires **Packaging Phase B** (native installers, when separately authorized) and **Orchestration** artifacts.
 
 Current rule for Implementation mappings (Gate 7 closed; rules still govern RTM maintenance):
 
@@ -217,6 +215,7 @@ Current Implementation orphan check:
 | 2026-05-04 | **Gate 7 (Implementation) exit:** SRS §17 Implementation closure amendments; FR-013 Tesseract; NFR-013/NFR-015 split Implementation vs Gate 8 measurement; RTM §3 NFR-013/015 rows; §5 deduplicated; §4 boundary “Planned” rows reconciled to implemented slices where code exists; §9 implementation traceability Yes. | All FR/NFR; OCR-BND-001; governance                                                                | No                      |
 | 2026-05-05 | **Gate 8 Phase A — Packaging:** `docs/packaging-plan.md`; `cmake/Packaging.cmake` (install + CPack TGZ/ZIP → `dist/`); Makefile `package` target; NFR-014 packaging column; Qt `SP_FileDialogInfoView` fix (`shell_main_window.cpp`).                                                                      | NFR-014, NFR-013; FR-028; governance                                                               | No                      |
 | 2026-05-07 | Promote enrichment scope to approved requirements: SRS FR-034/035/036 (derived outline + links + manual fallback); RTM rows and planned test IDs added.                                                                                                                                            | FR-034, FR-035, FR-036; governance                                                                 | No                      |
+| 2026-05-29 | **Gate 9 exit** — documentation closure recorded; verification (`make check`, enrich lint fixtures, `pte_shell` + `tc_fr028_probe`); demo app CMake option + `examples/demo_app/`; WBS dashboard under `tools/wbs-dashboard/`. | Gate 9; governance | No                      |
 | 2026-05-07 | **Gate 8 Phase A exit** — ADR-0006 **Accepted**; `.github/workflows/ci.yml`; `scripts/enrich_lint_manifest.sh` + `tests/fixtures/enrichment/`; `cmake/Packaging.cmake` ships lint script; RTM NFR-014 / FR-034..036 packaging refs; `docs/phase-gate-record.md` Gate 9 active. | ADR-0006; NFR-014; FR-034..036; Gate 8/9 | No                      |
 
 
