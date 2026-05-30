@@ -21,10 +21,15 @@ add_executable(pte_shell
 
 target_link_libraries(pte_shell PRIVATE
     pdf_text_extractor_core
+    PDFDocumentView::pdf_document_view
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
 )
+
+target_compile_definitions(pte_shell PRIVATE
+    "PTE_REPO_ROOT=\"${CMAKE_SOURCE_DIR}\""
+    "PTE_APP_VERSION=\"${PROJECT_VERSION}\"")
 
 if(MSVC)
     target_compile_options(pte_shell PRIVATE /W4)
@@ -37,4 +42,12 @@ if(WIN32)
 endif()
 if(APPLE)
     set_target_properties(pte_shell PROPERTIES MACOSX_BUNDLE TRUE)
+endif()
+
+if(TARGET pdf_document_view)
+    add_dependencies(pte_shell pdf_document_view)
+    if(APPLE OR UNIX)
+        set_target_properties(pte_shell PROPERTIES
+            BUILD_RPATH "$<TARGET_FILE_DIR:pdf_document_view>")
+    endif()
 endif()

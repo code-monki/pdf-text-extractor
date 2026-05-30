@@ -9,19 +9,20 @@
 #include "ui/shell_main_window.hpp"
 #include "ui/volume_metadata_dialog.hpp"
 
+#include <QApplication>
+#include <QCoreApplication>
 #include <QAction>
 #include <QActionGroup>
-#include <QApplication>
 #include <QDialog>
+#include <QDesktopServices>
 #include <QEventLoop>
 #include <QFileDialog>
-#include <QFrame>
+#include <QFileInfo>
 #include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QSize>
 #include <QSplitter>
@@ -29,10 +30,13 @@
 #include <QStyle>
 #include <QTextEdit>
 #include <QToolBar>
-#include <QSizePolicy>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindow>
+#include <QSizePolicy>
+
+#include <pdf_document_view/pdf_document_view_widget.hpp>
 
 #include "core/readiness_summary.hpp"
 
@@ -49,6 +53,23 @@ namespace {
  */
 QIcon shellStandardIcon(QStyle::StandardPixmap which) {
     return QApplication::style()->standardIcon(which);
+}
+
+/** @brief Resolves operator guide path for Help → Documentation (repo dev tree or app bundle). */
+QString operatorGuidePath() {
+#ifdef PTE_REPO_ROOT
+    const QString repoGuide =
+        QStringLiteral(PTE_REPO_ROOT) + QStringLiteral("/docs/shell-user-guide.md");
+    if (QFileInfo::exists(repoGuide)) {
+        return repoGuide;
+    }
+#endif
+    const QString bundleGuide =
+        QCoreApplication::applicationDirPath() + QStringLiteral("/../Resources/docs/shell-user-guide.md");
+    if (QFileInfo::exists(bundleGuide)) {
+        return bundleGuide;
+    }
+    return {};
 }
 
 } // namespace
@@ -143,6 +164,20 @@ void ShellMainWindow::buildUi() {
         }
     }
 
+    auto* previewFitWidthAction = viewMenu->addAction(tr("Preview &fit width"));
+    previewFitWidthAction->setStatusTip(tr("Zoom the PDF preview to fit the column width"));
+    connect(previewFitWidthAction, &QAction::triggered, this, &ShellMainWindow::onPreviewFitWidth);
+
+    auto* previewResetZoomAction = viewMenu->addAction(tr("Preview &reset zoom"));
+    previewResetZoomAction->setStatusTip(tr("Restore 100% zoom in the PDF preview"));
+    connect(previewResetZoomAction, &QAction::triggered, this, &ShellMainWindow::onPreviewResetZoom);
+
+    auto* helpMenu = menuBar()->addMenu(tr("&Help"));
+    auto* documentationAction = helpMenu->addAction(tr("&Documentation…"));
+    documentationAction->setStatusTip(tr("Open the shell user guide"));
+    connect(documentationAction, &QAction::triggered, this, &ShellMainWindow::onOpenDocumentation);
+    helpMenu->addAction(tr("&About…"), this, &ShellMainWindow::onAbout);
+
     auto* toolBar = addToolBar(tr("Main"));
     toolBar->setMovable(false);
     toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -193,9 +228,6 @@ void ShellMainWindow::buildUi() {
     reviewSyncLabel_ = new QLabel(tr("—"), this);
     reviewSyncLabel_->setMinimumWidth(280);
     reviewSyncLabel_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
-    reviewSyncLabel_->setElideMode(Qt::ElideMiddle);
-#endif
     toolBar->addWidget(reviewSyncLabel_);
 
     auto* central = new QWidget(this);
@@ -210,17 +242,27 @@ void ShellMainWindow::buildUi() {
     pageList_->setMinimumWidth(220);
     connect(pageList_, &QListWidget::currentRowChanged, this, &ShellMainWindow::onPageListRowChanged);
 
-    preview_ = new QLabel(tr("PDF page preview"), split);
-    preview_->setMinimumWidth(280);
-    preview_->setAlignment(Qt::AlignCenter);
-    preview_->setFrameShape(QFrame::StyledPanel);
+    pdfPreview_ = new pdf_document_view::PdfDocumentViewWidget(split);
+    pdfPreview_->setMinimumWidth(280);
+    connect(pdfPreview_, &pdf_document_view::PdfDocumentViewWidget::documentOpened, this,
+            [this](bool ok) {
+                if (pdfPreview_ == nullptr) {
+                    return;
+                }
+                if (ok) {
+                    pdfPreview_->fitWidth();
+                } else {
+                    statusBar()->showMessage(
+                        tr("PDF preview: %1").arg(pdfPreview_->documentError()), 5000);
+                }
+            });
 
     pageText_ = new QTextEdit(split);
     pageText_->setMinimumWidth(320);
     pageText_->setPlaceholderText(tr("Page text (pages/NNNN.txt)"));
 
     split->addWidget(pageList_);
-    split->addWidget(preview_);
+    split->addWidget(pdfPreview_);
     split->addWidget(pageText_);
     split->setStretchFactor(0, 0);
     split->setStretchFactor(1, 1);
@@ -235,16 +277,47 @@ void ShellMainWindow::wireFacade() {
     connect(facade_.get(), &pte::ui::ReviewSessionFacade::currentPageChanged, this, &ShellMainWindow::refreshPageUi);
     connect(facade_.get(), &pte::ui::ReviewSessionFacade::currentPageTextChanged, this, &ShellMainWindow::refreshPageText);
     connect(facade_.get(), &pte::ui::ReviewSessionFacade::statusMessageChanged, this, &ShellMainWindow::refreshStatus);
-    connect(facade_.get(), &pte::ui::ReviewSessionFacade::previewPixmapChanged, this,
-            &ShellMainWindow::refreshPreviewColumn);
+    connect(facade_.get(), &pte::ui::ReviewSessionFacade::sessionChanged, this, &ShellMainWindow::syncPdfPreviewWidget);
+    connect(facade_.get(), &pte::ui::ReviewSessionFacade::currentPageChanged, this, &ShellMainWindow::syncPdfPreviewWidget);
     connect(facade_.get(), &pte::ui::ReviewSessionFacade::reviewSyncChanged, this,
             &ShellMainWindow::refreshReviewSync);
     refreshReviewSync();
 }
 
-void ShellMainWindow::resizeEvent(QResizeEvent* event) {
-    QMainWindow::resizeEvent(event);
-    applyPreviewScale();
+void ShellMainWindow::onOpenDocumentation() {
+    const QString guidePath = operatorGuidePath();
+    if (guidePath.isEmpty()) {
+        QMessageBox::warning(this, tr("Documentation"),
+                             tr("User guide not found. See docs/shell-user-guide.md in the repository."));
+        return;
+    }
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(guidePath))) {
+        QMessageBox::warning(this, tr("Documentation"),
+                             tr("Could not open %1").arg(guidePath));
+    }
+}
+
+void ShellMainWindow::onAbout() {
+    const QString version = QApplication::applicationVersion();
+    QMessageBox::about(
+        this,
+        tr("About PDF Text Extractor"),
+        tr("PDF Text Extractor\nVersion %1\n\nLocal PDF text extraction and review shell.\n"
+           "PDF preview powered by PDFDocumentView (PDFium).\n\n"
+           "See Help → Documentation for operator guidance.")
+            .arg(version.isEmpty() ? QStringLiteral("unknown") : version));
+}
+
+void ShellMainWindow::onPreviewFitWidth() {
+    if (pdfPreview_ != nullptr) {
+        pdfPreview_->fitWidth();
+    }
+}
+
+void ShellMainWindow::onPreviewResetZoom() {
+    if (pdfPreview_ != nullptr) {
+        pdfPreview_->resetZoom();
+    }
 }
 
 void ShellMainWindow::onOpenPdf() {
@@ -391,8 +464,7 @@ void ShellMainWindow::refreshSessionUi() {
 }
 
 void ShellMainWindow::refreshPageUi() {
-    // Navigation actions: disabled when no session page; first/prev off at idx 0; next/last off at last page.
-    if (pageList_ == nullptr || pageLabel_ == nullptr || preview_ == nullptr) {
+    if (pageList_ == nullptr || pageLabel_ == nullptr) {
         return;
     }
     if (savePageAction_ != nullptr) {
@@ -428,51 +500,31 @@ void ShellMainWindow::refreshPageUi() {
     } else {
         pageLabel_->setText(tr("Page — / —"));
     }
-    refreshPreviewColumn();
     refreshReviewSync();
+    syncPdfPreviewWidget();
+}
+
+void ShellMainWindow::syncPdfPreviewWidget() {
+    if (pdfPreview_ == nullptr || facade_ == nullptr) {
+        return;
+    }
+    const QString pdfPath = facade_->sourcePdfPath();
+    if (pdfPath.isEmpty()) {
+        return;
+    }
+    if (pdfPreview_->documentPath() != pdfPath || !pdfPreview_->isDocumentOpen()) {
+        pdfPreview_->setDocumentPath(pdfPath);
+    }
+    const int idx = facade_->currentPageIndex();
+    if (idx >= 0 && idx < pdfPreview_->pageCount() && pdfPreview_->currentPageIndex() != idx) {
+        pdfPreview_->setCurrentPageIndex(idx);
+    }
 }
 
 void ShellMainWindow::refreshReviewSync() {
     if (reviewSyncLabel_ != nullptr && facade_ != nullptr) {
         reviewSyncLabel_->setText(facade_->reviewSyncSummary());
     }
-}
-
-void ShellMainWindow::refreshPreviewColumn() {
-    if (preview_ == nullptr || facade_ == nullptr) {
-        return;
-    }
-    const QPixmap px = facade_->currentPreviewPixmap();
-    if (!px.isNull()) {
-        preview_->setText(QString());
-        previewSource_ = px;
-        applyPreviewScale();
-        return;
-    }
-    preview_->setPixmap(QPixmap());
-    previewSource_ = QPixmap();
-    const int n = facade_->pageCount();
-    const int idx = facade_->currentPageIndex();
-    if (n > 0 && idx >= 0) {
-        preview_->setText(
-            tr("Preview unavailable\n(page %1)\nInstall Poppler pdftoppm on PATH.")
-                .arg(facade_->currentPageId()));
-    } else {
-        preview_->setText(tr("PDF page preview"));
-    }
-}
-
-void ShellMainWindow::applyPreviewScale() {
-    if (preview_ == nullptr || previewSource_.isNull()) {
-        return;
-    }
-    const QSize size = preview_->contentsRect().size();
-    if (size.width() <= 0 || size.height() <= 0) {
-        return;
-    }
-    preview_->setPixmap(
-        previewSource_.scaled(size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    preview_->setAlignment(Qt::AlignCenter);
 }
 
 void ShellMainWindow::refreshPageText() {

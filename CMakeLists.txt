@@ -120,6 +120,15 @@ endif()
 
 option(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL "Build Qt Widgets reviewer shell (pte_shell); requires Qt 6.5+" OFF)
 if(PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL)
+    set(PDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT "" CACHE PATH
+        "Path to PDFDocumentView checkout (required for pte_shell preview)")
+    if(PDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT STREQUAL ""
+            AND EXISTS "${CMAKE_SOURCE_DIR}/../PDFDocumentView/CMakeLists.txt")
+        set(PDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT
+            "${CMAKE_SOURCE_DIR}/../PDFDocumentView"
+            CACHE PATH "Path to PDFDocumentView checkout (required for pte_shell preview)" FORCE)
+    endif()
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PDFDocumentView.cmake")
     add_subdirectory(src/ui)
 
     add_executable(tc_fr028_probe

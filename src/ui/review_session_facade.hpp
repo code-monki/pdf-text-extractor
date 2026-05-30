@@ -6,20 +6,17 @@
  */
 
 #include <QObject>
-#include <QPixmap>
 #include <QString>
 #include <QStringList>
-#include <QTemporaryDir>
 
 #include <filesystem>
-#include <memory>
 
 namespace pte::ui {
 
 /**
  * @brief Exposes one PDF review session to QML-free Widgets UI code.
  *
- * @details Owns session state (paths, page list, current index, preview pixmap cache). Emits Qt
+ * @details Owns session state (paths, page list, current index). Emits Qt
  *          signals when data changes so ShellMainWindow can refresh without polling. Does not
  *          render widgets.
  *
@@ -60,8 +57,6 @@ public:
     QString currentPageId() const;
     /** @brief Text shown in the page editor (reviewed file or embedded candidate fill). */
     QString currentPageText() const;
-    /** @brief Raster preview for the current page when Poppler rendering succeeded. */
-    QPixmap currentPreviewPixmap() const;
     /** @brief Raw review status token for the current page. */
     QString reviewStatus() const;
     /** @brief Selected extraction source label for the current page. */
@@ -79,7 +74,7 @@ public:
      */
     Q_INVOKABLE bool openPdf(const QString& pdfPath, const QString& requestedWorkFolder);
     /**
-     * @brief Selects page by index and reloads text/preview as needed.
+     * @brief Selects page by index and reloads page text as needed.
      * @return False if index is out of range or no session.
      */
     Q_INVOKABLE bool selectPage(int index);
@@ -91,7 +86,7 @@ public:
     Q_INVOKABLE void refreshAfterVolumeMetadataSave();
     /**
      * @brief Re-runs Poppler embedded candidate extraction for all pages (does not clear reviewed
-     *        `pages/*.txt` files). No-op if no work folder or volume metadata.
+     *        pages/NNNN.txt files). No-op if no work folder or volume metadata.
      */
     Q_INVOKABLE bool reextractEmbeddedCandidates();
 
@@ -100,7 +95,6 @@ signals:
     void sessionChanged();
     void currentPageChanged();
     void currentPageTextChanged();
-    void previewPixmapChanged();
     void reviewSyncChanged();
 
 private:
@@ -108,8 +102,6 @@ private:
     std::filesystem::path currentPagePath() const;
     /** @brief Reloads currentPageText_ from disk or embedded candidate policy. */
     bool reloadCurrentPageText();
-    /** @brief Regenerates previewPixmap_ via Poppler raster helper when dependencies exist. */
-    void refreshPreviewRaster();
     /** @brief Reloads review-status-derived fields for reviewSyncSummary(). */
     void reloadReviewSync();
     /** @brief Derives a stable volume directory name from the PDF filename stem. */
@@ -123,8 +115,6 @@ private:
     QStringList pageIds_;
     int currentPageIndex_ = -1;
     QString currentPageText_;
-    QPixmap previewPixmap_;
-    std::unique_ptr<QTemporaryDir> previewTempDir_;
     QString reviewStatus_;
     QString selectedSource_;
     QString printedPageLabel_;

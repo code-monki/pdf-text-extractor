@@ -25,8 +25,11 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("PDF Text Extractor"));
     QApplication::setOrganizationName(QStringLiteral("pdf-text-extractor"));
+#ifdef PTE_APP_VERSION
+    QApplication::setApplicationVersion(QStringLiteral(PTE_APP_VERSION));
+#endif
 
-    // Use the platform UI font (e.g. San Francisco on macOS) instead of Fusion’s generic default.
+    // Use the platform UI font
     QApplication::setFont(QFontDatabase::systemFont(QFontDatabase::GeneralFont));
 
     pte::ui::applySavedThemeOrDefault(&app);

@@ -1,6 +1,6 @@
 /**
  * @file review_session_facade.cpp
- * @brief Implementation of @ref pte::ui::ReviewSessionFacade — session lifecycle, preview, and I/O.
+ * @brief Implementation of @ref pte::ui::ReviewSessionFacade — session lifecycle and I/O.
  */
 
 #include "ui/review_session_facade.hpp"
@@ -9,14 +9,12 @@
 #include "core/page_id.hpp"
 #include "core/candidate_text.hpp"
 #include "core/page_review_sync.hpp"
-#include "core/poppler_page_render.hpp"
 #include "core/reviewed_page_text.hpp"
 #include "core/review_state_update.hpp"
 #include "core/volume_bootstrap.hpp"
 #include "core/volume_extraction_pipeline.hpp"
 #include "core/volume_metadata.hpp"
 
-#include <QImage>
 #include <QStringList>
 #include <QUrl>
 
@@ -158,10 +156,6 @@ QString ReviewSessionFacade::currentPageText() const {
     return currentPageText_;
 }
 
-QPixmap ReviewSessionFacade::currentPreviewPixmap() const {
-    return previewPixmap_;
-}
-
 QString ReviewSessionFacade::reviewStatus() const {
     return reviewStatus_;
 }
@@ -286,8 +280,6 @@ bool ReviewSessionFacade::openPdf(const QString& pdfPath, const QString& request
         pageIds_.push_back(QString::fromStdString(core::pageIdForPdfPage(page)));
     }
     currentPageIndex_ = 0;
-    previewTempDir_ = std::make_unique<QTemporaryDir>();
-    refreshPreviewRaster();
     reloadReviewSync();
     emit sessionChanged();
     emit currentPageChanged();
@@ -344,7 +336,6 @@ bool ReviewSessionFacade::selectPage(int index) {
         return true;
     }
     currentPageIndex_ = index;
-    refreshPreviewRaster();
     reloadReviewSync();
     emit currentPageChanged();
     return reloadCurrentPageText();
@@ -401,51 +392,6 @@ std::filesystem::path ReviewSessionFacade::currentPagePath() const {
     }
     return std::filesystem::path(workFolderPath_.toStdString()) / "pages" /
            (pageIds_.at(currentPageIndex_).toStdString() + ".txt");
-}
-
-void ReviewSessionFacade::refreshPreviewRaster() {
-    previewPixmap_ = QPixmap();
-    emit previewPixmapChanged();
-
-    if (sourcePdfPath_.isEmpty() || currentPageIndex_ < 0 || currentPageIndex_ >= pageIds_.size()) {
-        return;
-    }
-    if (!previewTempDir_ || !previewTempDir_->isValid()) {
-        previewTempDir_ = std::make_unique<QTemporaryDir>();
-        if (!previewTempDir_->isValid()) {
-            return;
-        }
-    }
-
-    const std::filesystem::path pdfPath = sourcePdfPath_.toStdString();
-    const int pdfPageOneBased = currentPageIndex_ + 1;
-    core::PopplerPageRenderer renderer;
-    core::PopplerPageRenderer::Options options;
-    options.dpi = 110;
-    if (const auto pdftoppm = defaultPdftoppmPath(); pdftoppm.has_value()) {
-        options.pdftoppmExecutable = *pdftoppm;
-    }
-
-    const std::string baseName = "preview-" + pageIds_.at(currentPageIndex_).toStdString();
-    const std::filesystem::path outDir = previewTempDir_->path().toStdString();
-    const core::PageRenderOutcome outcome =
-        renderer.renderPagePng(pdfPath, pdfPageOneBased, outDir, baseName, options);
-    if (!outcome.success) {
-        return;
-    }
-
-    QImage image;
-    if (!image.load(QString::fromStdString(outcome.imagePath.string()))) {
-        return;
-    }
-
-    constexpr int kMaxPreviewWidthPx = 1200;
-    if (image.width() > kMaxPreviewWidthPx) {
-        image = image.scaledToWidth(kMaxPreviewWidthPx, Qt::SmoothTransformation);
-    }
-
-    previewPixmap_ = QPixmap::fromImage(image);
-    emit previewPixmapChanged();
 }
 
 bool ReviewSessionFacade::reloadCurrentPageText() {

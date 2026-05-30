@@ -39,7 +39,7 @@ bool isKnownBuiltInThemeId(const QString& themeId);
 /**
  * @brief Applies Fusion + palette for the given built-in theme id.
  *
- * @post PDF preview pixmap colors unchanged except as inherited from widget chrome around them.
+ * @post PDF preview content is rendered by PDFDocumentView; chrome follows the active theme.
  */
 void applyTheme(QApplication* app, const QString& themeId);
 

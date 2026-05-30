@@ -14,6 +14,7 @@ BUILD_DIR ?= build
 # Optional Qt 6 kit path for pte_shell (separate from default headless build).
 SHELL_BUILD_DIR ?= build-qt-shell
 QT_PREFIX ?=
+PDFDOCUMENTVIEW_ROOT ?=
 BUILD_TYPE ?= Debug
 CTEST_OUTPUT_ON_FAILURE ?= 1
 ENRICH_MANIFEST ?= tests/fixtures/enrichment/lint.manifest.tsv
@@ -57,6 +58,7 @@ help:
 	@printf '  %-14s %s\n' 'CXX' 'C++ compiler, default: c++'
 	@printf '  %-14s %s\n' 'SHELL_BUILD_DIR' 'Qt shell CMake tree, default: build-qt-shell'
 	@printf '  %-14s %s\n' 'QT_PREFIX' 'Qt 6 CMAKE_PREFIX_PATH (required for shell targets)'
+	@printf '  %-14s %s\n' 'PDFDOCUMENTVIEW_ROOT' 'PDFDocumentView checkout (optional; default ../PDFDocumentView)'
 	@printf '  %-14s %s\n' 'ENRICH_SOURCE' 'Source PDF for make enrich-lint (required).'
 	@printf '  %-14s %s\n' 'ENRICH_OUTLINE_MAP' 'Outline map path for make enrich-lint (optional).'
 	@printf '  %-14s %s\n' 'ENRICH_LINK_MAP' 'Link map path for make enrich-lint (optional).'
@@ -96,8 +98,17 @@ shell-configure: tool-check
 		printf '%s\n' 'QT_PREFIX is required (path to Qt 6 kit, e.g. export QT_PREFIX=$$HOME/Qt/6.9.3/macos). See docs/ui-shell.md.'; \
 		exit 1; \
 	}
-	@"$(CMAKE)" -S . -B "$(SHELL_BUILD_DIR)" -DCMAKE_BUILD_TYPE="$(BUILD_TYPE)" \
+	@_pdfdocview_root="$(PDFDOCUMENTVIEW_ROOT)"; \
+	if [ -z "$$_pdfdocview_root" ] && [ -f "../PDFDocumentView/CMakeLists.txt" ]; then \
+		_pdfdocview_root="$$(cd .. && pwd)/PDFDocumentView"; \
+	fi; \
+	if [ -z "$$_pdfdocview_root" ] || [ ! -f "$$_pdfdocview_root/CMakeLists.txt" ]; then \
+		printf '%s\n' 'PDFDocumentView checkout required (set PDFDOCUMENTVIEW_ROOT or clone sibling ../PDFDocumentView).'; \
+		exit 1; \
+	fi; \
+	QT_PREFIX="$(QT_PREFIX)" "$(CMAKE)" -S . -B "$(SHELL_BUILD_DIR)" -DCMAKE_BUILD_TYPE="$(BUILD_TYPE)" \
 		-DPDF_TEXT_EXTRACTOR_BUILD_QT_SHELL=ON \
+		-DPDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT="$$_pdfdocview_root" \
 		-DCMAKE_PREFIX_PATH="$(QT_PREFIX)"
 
 .PHONY: shell

@@ -3,7 +3,7 @@
 | Audience | Operators using the Qt Widgets reviewer (`pte_shell`) |
 |----------|------------------------------------------------------|
 | Related docs | [UI shell (developer)](ui-shell.md) — build, CMake, theming, architecture; [CLI reference](cli-reference.md) (`pte_bootstrap`, `pte_enrich`); [Documentation index](README.md); [Integration tutorial](integration-tutorial.md) (embedding `pdf_text_extractor_core`, optional `pte_demo_app`) |
-| Help menu (planned) | **Documentation** should open this file (bundled or repo copy); **About** should show version and credits (see [§ Planned Help integration](#planned-help-integration)). |
+| Help menu | **Help → Documentation** opens `docs/shell-user-guide.md` (repo dev tree or app bundle Resources). **Help → About** shows version **0.1.0** and credits. |
 
 ---
 
@@ -20,7 +20,7 @@ The shell lets you open **one PDF at a time**, associate it with a **local work 
 | **Menu bar** | Full text for every command (File, Edit, View → Theme). |
 | **Main toolbar** | Same commands as key File/Edit actions, shown as **icons** with **tooltips** (hover to see the full description and shortcuts). |
 | **Page list** (left) | One row per page ID; click to change the current page. |
-| **Preview** (center) | Thumbnail of the current PDF page via Poppler `pdftoppm` when available. |
+| **Preview** (center) | Scrollable PDF page view via **PDFDocumentView** (PDFium). Toolbar page navigation and the page list stay synchronized. Use **View → Preview fit width** / **Preview reset zoom** for zoom. |
 | **Page text** (right) | Editable text for the current page; **Save** writes `pages/NNNN.txt` per the facade rules. |
 | **Status bar** | Session messages from the review facade. |
 | **Review line on toolbar** | Short summary of review metadata sync for the current page (NFR-006). |
@@ -57,7 +57,7 @@ Shortcuts apply **globally** where Qt assigns them to the action (application sh
 | First page | **Ctrl+Home** |
 | Last page | **Ctrl+End** |
 
-Other toolbar actions rely on the menu or toolbar unless additional shortcuts are added later.
+Preview zoom uses **View → Preview fit width** and **View → Preview reset zoom** (no default shortcuts yet).
 
 ---
 
@@ -80,7 +80,12 @@ Duplicates **Volume metadata**, **Re-extract embedded candidates**, and **Readin
 
 Choose a built-in theme (light, dark, sepia). Preference is stored per user on this machine (`QSettings`), not in the work folder.
 
----
+**Preview fit width** and **Preview reset zoom** adjust the PDFDocumentView preview column only.
+
+### Help
+
+- **Documentation…** — opens this user guide (`docs/shell-user-guide.md`) with the system default application for Markdown.
+- **About…** — application name, packaged version string, and PDFDocumentView credit line.
 
 ## Workflow summary
 
@@ -90,22 +95,11 @@ Choose a built-in theme (light, dark, sepia). Preference is stored per user on t
 4. Use **Volume metadata** for bibliographic and printed label fields.
 5. Use **Readiness summary** for a high-level status picture before release-oriented steps.
 
-For **building** the shell, Qt version, and **preview dependencies**, see [ui-shell.md](ui-shell.md).
+For **building** the shell, Qt version, and **PDFDocumentView** dependency, see [ui-shell.md](ui-shell.md).
 
 ---
 
-## Planned Help integration
+## Extraction vs preview
 
-When **Help → Documentation** is implemented, the application should open this document:
-
-- **Development:** `docs/shell-user-guide.md` in the repository (or a generated HTML copy).
-- **Packaged build:** ship the same content beside the binary or inside the app bundle `Resources/`, and open with `QDesktopServices::openUrl` or a small HTML viewer.
-
-When **Help → About** is implemented, show at minimum:
-
-- Application name **PDF Text Extractor**
-- Version string from build metadata (CMake / `QApplication::applicationVersion()`)
-- Short credit line (project / license reference as required by your packaging)
-- Optional link to project documentation root
-
-Traceability: FR-028 (native shell), NFR-009 (native UX); Help actions may be tracked under future SRS items when added.
+- **Preview** uses **PDFDocumentView** (PDFium) embedded in the shell — no Poppler `pdftoppm` required for display.
+- **Embedded text candidates** and inventory still use **Poppler** (`pdftotext`, `pdfinfo`) on `PATH` when configured.

@@ -31,7 +31,9 @@ CPack archives that can include `pte_shell` (when built) are described in **`doc
 
 The default CMake tree (for example `cmake -S . -B build` or `make configure`) sets **`PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL` to OFF**. In that configuration **there is no `pte_shell` target**, so `cmake --build build --target pte_shell` fails with “No rule to make target”. Enable the option (and set **`CMAKE_PREFIX_PATH`** to your Qt 6 kit) to generate the shell target, or use **`make shell QT_PREFIX=…`**, which configures **`SHELL_BUILD_DIR`** (default `build-qt-shell`) with the shell enabled.
 
-Requires **Qt 6.5 or newer** installed and discoverable by CMake. Point CMake at the **platform kit** that contains `lib/cmake/Qt6/Qt6Config.cmake` (not the parent `Qt` directory alone).
+Requires **Qt 6.5 or newer** and a checkout of **[PDFDocumentView](https://github.com/code-monki/PDFDocumentView)** for the preview column (PDFium backend). CMake option **`PDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT`** must point at that tree when **`PDF_TEXT_EXTRACTOR_BUILD_QT_SHELL=ON`**. If unset, configure tries **`../PDFDocumentView`** relative to this repository (sibling checkout).
+
+Point CMake at the **platform Qt kit** that contains `lib/cmake/Qt6/Qt6Config.cmake` (not the parent `Qt` directory alone).
 
 On **this machine**, Qt lives under `/Users/chuck/Qt`; the macOS 6.9.3 kit prefix is:
 
@@ -40,6 +42,16 @@ On **this machine**, Qt lives under `/Users/chuck/Qt`; the macOS 6.9.3 kit prefi
 ```
 
 Example configure and build:
+
+```bash
+cmake -S . -B build-qt-shell \
+  -DPDF_TEXT_EXTRACTOR_BUILD_QT_SHELL=ON \
+  -DPDF_TEXT_EXTRACTOR_PDFDOCUMENTVIEW_ROOT=/path/to/PDFDocumentView \
+  -DCMAKE_PREFIX_PATH=/Users/chuck/Qt/6.9.3/macos
+cmake --build build-qt-shell --target pte_shell
+```
+
+Or with sibling checkout `../PDFDocumentView`:
 
 ```bash
 cmake -S . -B build \
@@ -86,16 +98,17 @@ make shell-go QT_PREFIX=/path/to/Qt/6.x.x/macos
 
 ---
 
-## Operator documentation (Help menu target)
+## Operator documentation (Help menu)
 
-End-user orientation for menus, **icon toolbar**, shortcuts, and workflows lives in **`docs/shell-user-guide.md`**. That file is the intended body for a future **Help → Documentation** action (`QDesktopServices` or bundled HTML). **Help → About** should surface version/credits per the same guide’s “Planned Help integration” section.
+End-user orientation for menus, **icon toolbar**, shortcuts, and workflows lives in **`docs/shell-user-guide.md`**. **`pte_shell`** implements **Help → Documentation** (opens that guide via `QDesktopServices`) and **Help → About** (version + credits).
 
 ---
 
 ## Scope of this slice
 
-- **In scope:** Application window, **File** / **Edit** menus and main toolbar (**Volume metadata…**, shortcut **Ctrl+M** / **⌘M** on macOS via Qt) opening `VolumeMetadataDialog` for `volume.json` (FR-006 / NFR-009), including the **Pages and cover** tab for printed page labels and cover page ID (FR-008 / FR-010); toolbar **review sync** summary line (`ReviewSessionFacade::reviewSyncSummary`, NFR-006); horizontal splitter (page list / **thin PDF preview** / page text); status bar; `ReviewSessionFacade` wiring. On open, when **`pdftotext`** is on `PATH`, the shell runs **embedded candidate extraction** for all pages (OCR off by default for speed). Reviewed files under `pages/` start empty; the editor **shows embedded candidate text** until you save, which persists reviewed page text. Preview rasterizes the current page via **Poppler `pdftoppm`** (`PopplerPageRenderer`); if `pdftoppm` is missing, the middle column shows a short unavailable message.
-- **Out of scope:** Full in-window PDF viewer (search-in-preview, continuous scroll, embedded link navigation), file system tree beyond page IDs, full bibliographic field matrix — follow-up slices.
+- **In scope:** Application window, **File** / **Edit** / **View** / **Help** menus and main toolbar; **PDFDocumentView** (`PdfDocumentViewWidget`) preview column (PDFium); page list / preview / text synchronization via `ReviewSessionFacade`; volume metadata dialog; readiness summary; themes; Help → Documentation / About.
+- **Preview:** Embedded **PDFDocumentView** — scrollable page view with fit-width / reset-zoom (**View** menu). Poppler **`pdftoppm` is not used for shell preview** (Poppler remains required for extraction/inventory when those features are enabled).
+- **Out of scope (follow-up):** In-preview text search UI, host highlight overlays for enrichment editing, file system tree beyond page IDs.
 
 ---
 
@@ -109,13 +122,13 @@ Requirements (**`docs/software-requirements-specification.md`**): **FR-033** —
 - **`View` → `Theme`** — exclusive actions; save + apply immediately.
 - **Debug:** **`validateBuiltInThemesContrastHint()`** at startup; **`qWarning`** if WCAG-style checks fail.
 
-Preview column: **Poppler** image is unchanged; only the widget chrome around it follows the palette.
+Preview column: **PDFDocumentView** renders page content; application chrome (themes) wraps the widget via Qt palettes.
 
 ---
 
 ## Traceability
 
-- Requirements: FR-006 (volume metadata edit dialog), FR-008 / FR-010 (printed labels and cover in metadata UI), FR-028 (native application framing; thin Poppler preview supports PDF review in-shell), FR-033 (theme selection + persistence), NFR-006 (review metadata aligned with page selection), NFR-009 (native UX baseline), NFR-016 (theme contrast sanity checks).
-- Operator documentation: **`docs/shell-user-guide.md`** (menus, icon toolbar, shortcuts, planned Help integration).
+- Requirements: FR-006, FR-008 / FR-010, FR-028 (native shell + PDFDocumentView preview), FR-033, NFR-006, NFR-009, NFR-016.
+- Operator documentation: **`docs/shell-user-guide.md`** (Help → Documentation target; implemented).
 - Wireframe reference: `docs/images/pdf-text-extractor-wireframe-v2.svg`.
 - ADR: `docs/adrs/0004-presentation-qt-qml-baseline.md` (Widgets amendment).

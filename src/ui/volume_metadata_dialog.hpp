@@ -15,7 +15,7 @@ namespace pte::ui {
  * @brief Modal form for editing work-folder `volume.json` (FR-006, NFR-009).
  *
  * @details Manages title, notes, bibliographic fields, page label map, and cover page id. Does not
- *          modify the source PDF or `pages/*.txt` files; saving rewrites `volume.json` atomically
+ *          modify the source PDF or pages/NNNN.txt reviewed text files; saving rewrites volume.json atomically
  *          through core helpers. Caller should invoke ReviewSessionFacade::refreshAfterVolumeMetadataSave
  *          after accept.
  */
