@@ -101,6 +101,7 @@ Choose a built-in theme (light, dark, sepia). Preference is stored per user on t
 
 ### Help
 
+- **Check extraction tools…** — reports whether Poppler (`pdfinfo`, `pdftotext`, `pdftoppm`) and optional **Tesseract** are on `PATH` or common install locations. Required tools must be present before **Open PDF** and **Re-extract embedded candidates** can populate page text. Preview rendering uses **PDFium**, not Poppler.
 - **Documentation…** — opens this user guide (`docs/shell-user-guide.md`) with the system default application for Markdown.
 - **About…** — application name, packaged version string, and PDFDocumentView credit line.
 

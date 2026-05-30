@@ -8,6 +8,7 @@
 #include "core/local_path_intent.hpp"
 #include "core/page_id.hpp"
 #include "core/candidate_text.hpp"
+#include "core/dependency_capability.hpp"
 #include "core/page_review_sync.hpp"
 #include "core/reviewed_page_text.hpp"
 #include "core/review_state_update.hpp"
@@ -111,6 +112,73 @@ std::optional<std::filesystem::path> defaultPdftotextPath() {
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::filesystem::path> defaultTesseractPath() {
+    if (const auto fromPath = findExecutableOnPath("tesseract"); fromPath.has_value()) {
+        return fromPath;
+    }
+
+    static const std::vector<std::filesystem::path> kCommon = {
+        "/opt/homebrew/bin/tesseract",
+        "/usr/local/bin/tesseract",
+        "/opt/local/bin/tesseract",
+        "/usr/bin/tesseract",
+    };
+    for (const auto& candidate : kCommon) {
+        std::error_code error;
+        if (std::filesystem::is_regular_file(candidate, error) && !error) {
+            return candidate;
+        }
+    }
+    return std::nullopt;
+}
+
+std::string pathSearchEnv() {
+    const char* rawPath = std::getenv("PATH");
+    return rawPath != nullptr ? std::string(rawPath) : std::string{};
+}
+
+std::vector<core::ToolCheckRequest> buildExtractionToolRequests() {
+    std::vector<core::ToolCheckRequest> requests;
+    requests.reserve(4);
+
+    auto push = [&](std::string toolId, std::string executableName,
+                    const std::optional<std::filesystem::path>& configured, bool required,
+                    std::vector<std::string> features) {
+        core::ToolCheckRequest request;
+        request.toolId = std::move(toolId);
+        request.executableName = std::move(executableName);
+        if (configured.has_value()) {
+            request.configuredPath = *configured;
+        }
+        request.required = required;
+        request.supportedFeatures = std::move(features);
+        requests.push_back(std::move(request));
+    };
+
+    push("poppler-pdfinfo", "pdfinfo", defaultPdfinfoPath(), true, {"inspection"});
+    push("poppler-pdftotext", "pdftotext", defaultPdftotextPath(), true, {"embedded-text"});
+    push("poppler-pdftoppm", "pdftoppm", defaultPdftoppmPath(), false, {"ocr-raster"});
+    push("tesseract", "tesseract", defaultTesseractPath(), false, {"ocr"});
+    return requests;
+}
+
+core::CapabilityReport detectExtractionTools() {
+    return core::DependencyCapabilityService().detectCapabilities(buildExtractionToolRequests(),
+                                                                  pathSearchEnv());
+}
+
+QString formatToolCapabilityLine(const core::ToolCapability& tool) {
+    const QString status =
+        tool.detected ? QStringLiteral("OK")
+                      : (tool.required ? QStringLiteral("MISSING (required)")
+                                       : QStringLiteral("MISSING (optional)"));
+    QString line = QStringLiteral("[%1] %2").arg(status, QString::fromStdString(tool.toolId));
+    if (tool.detected && !tool.path.empty()) {
+        line += QStringLiteral(": %1").arg(QString::fromStdString(tool.path.string()));
+    }
+    return line;
 }
 
 bool isBlankReviewedText(std::string_view text) {
@@ -304,6 +372,14 @@ bool ReviewSessionFacade::reextractEmbeddedCandidates() {
         return false;
     }
 
+    if (!defaultPdftotextPath().has_value()) {
+        statusMessage_ =
+            QStringLiteral("pdftotext not found; install Poppler and ensure pdftotext is on PATH "
+                           "(Help → Check extraction tools)");
+        emit statusMessageChanged();
+        return false;
+    }
+
     pte::core::VolumeCandidateExtractRequest extractRequest;
     extractRequest.workFolder = workFolder;
     extractRequest.sourcePdfPath = sourcePdfPath_.toStdString();
@@ -476,6 +552,30 @@ std::string ReviewSessionFacade::makeVolumeId(const std::string& filenameStem) {
 std::filesystem::path ReviewSessionFacade::defaultWorkFolderForPdf(
     const std::filesystem::path& pdfPath) {
     return pdfPath.parent_path() / (pdfPath.stem().string() + "-work");
+}
+
+QString ReviewSessionFacade::extractionToolsReport() const {
+    const core::CapabilityReport report = detectExtractionTools();
+    QStringList lines;
+    lines << QStringLiteral("Local extraction tools (filesystem check only; tools are not executed):");
+    for (const core::ToolCapability& tool : report.tools) {
+        lines << formatToolCapabilityLine(tool);
+    }
+    lines << QString();
+    if (report.ok()) {
+        lines << QStringLiteral("Required tools for open/extract: available.");
+    } else {
+        lines << QStringLiteral("Required tools missing: %1. Open PDF and embedded re-extract need "
+                                "Poppler pdfinfo and pdftotext.")
+                     .arg(report.missingRequiredCount());
+    }
+    lines << QStringLiteral("PDF preview uses PDFium (PDFDocumentView), not Poppler pdftoppm.");
+    lines << QStringLiteral("Optional pdftoppm and tesseract are needed only when OCR routing is enabled.");
+    return lines.join(QLatin1Char('\n'));
+}
+
+bool ReviewSessionFacade::requiredExtractionToolsAvailable() const {
+    return detectExtractionTools().ok();
 }
 
 } // namespace pte::ui

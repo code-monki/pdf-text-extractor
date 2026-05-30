@@ -204,6 +204,10 @@ void ShellMainWindow::buildUi() {
     viewMenu->addAction(findPrevInPreviewAction_);
 
     auto* helpMenu = menuBar()->addMenu(tr("&Help"));
+    auto* checkToolsAction = helpMenu->addAction(tr("Check extraction &tools…"));
+    checkToolsAction->setStatusTip(tr("Report Poppler and Tesseract availability (FR-031)"));
+    connect(checkToolsAction, &QAction::triggered, this, &ShellMainWindow::onCheckExtractionTools);
+    helpMenu->addSeparator();
     auto* documentationAction = helpMenu->addAction(tr("&Documentation…"));
     documentationAction->setStatusTip(tr("Open the shell user guide"));
     connect(documentationAction, &QAction::triggered, this, &ShellMainWindow::onOpenDocumentation);
@@ -392,6 +396,13 @@ void ShellMainWindow::onAbout() {
            "PDF preview powered by PDFDocumentView (PDFium).\n\n"
            "See Help → Documentation for operator guidance.")
             .arg(version.isEmpty() ? QStringLiteral("unknown") : version));
+}
+
+void ShellMainWindow::onCheckExtractionTools() {
+    if (facade_ == nullptr) {
+        return;
+    }
+    QMessageBox::information(this, tr("Extraction tools"), facade_->extractionToolsReport());
 }
 
 void ShellMainWindow::onPreviewFitWidth() {

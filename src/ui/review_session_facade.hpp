@@ -89,6 +89,12 @@ public:
      *        pages/NNNN.txt files). No-op if no work folder or volume metadata.
      */
     Q_INVOKABLE bool reextractEmbeddedCandidates();
+    /**
+     * @brief Multi-line safe report of Poppler/Tesseract availability for operator review (FR-031).
+     */
+    Q_INVOKABLE QString extractionToolsReport() const;
+    /** @brief True when required extraction tools (pdfinfo, pdftotext) are detected locally. */
+    Q_INVOKABLE bool requiredExtractionToolsAvailable() const;
 
 signals:
     void statusMessageChanged();

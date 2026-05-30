@@ -48,6 +48,7 @@ private slots:
     void onThemeTriggered(QAction* action);
     void onOpenDocumentation();
     void onAbout();
+    void onCheckExtractionTools();
     void onPreviewFitWidth();
     void onPreviewResetZoom();
     void onPreviewFindTriggered();
