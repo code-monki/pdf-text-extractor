@@ -106,9 +106,9 @@ End-user orientation for menus, **icon toolbar**, shortcuts, and workflows lives
 
 ## Scope of this slice
 
-- **In scope:** Application window, **File** / **Edit** / **View** / **Help** menus and main toolbar; **PDFDocumentView** (`PdfDocumentViewWidget`) preview column (PDFium); page list / preview / text synchronization via `ReviewSessionFacade`; volume metadata dialog; readiness summary; themes; Help → Documentation / About.
-- **Preview:** Embedded **PDFDocumentView** — scrollable page view with fit-width / reset-zoom (**View** menu). Poppler **`pdftoppm` is not used for shell preview** (Poppler remains required for extraction/inventory when those features are enabled).
-- **Out of scope (follow-up):** In-preview text search UI, host highlight overlays for enrichment editing, file system tree beyond page IDs.
+- **In scope:** Application window, **File** / **Edit** / **View** / **Help** menus and main toolbar; **PDFDocumentView** (`PdfDocumentViewWidget`) preview column (PDFium) with **in-preview find** (search field, next/previous, match counter); page list / preview / text synchronization via `ReviewSessionFacade`; volume metadata dialog; readiness summary; themes; Help → Documentation / About.
+- **Preview:** Embedded **PDFDocumentView** — scrollable page view with fit-width / reset-zoom (**View** menu) and PDF text search (**Edit** / **View → Find in preview**). Poppler **`pdftoppm` is not used for shell preview** (Poppler remains required for extraction/inventory when those features are enabled).
+- **Out of scope (follow-up):** Host highlight overlays for enrichment editing, file system tree beyond page IDs.
 
 ---
 

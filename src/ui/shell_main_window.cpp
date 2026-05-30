@@ -18,8 +18,10 @@
 #include <QEventLoop>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -30,6 +32,7 @@
 #include <QStyle>
 #include <QTextEdit>
 #include <QToolBar>
+#include <QToolButton>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -139,10 +142,33 @@ void ShellMainWindow::buildUi() {
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Quit"), QKeySequence::Quit, this, &QWidget::close);
 
+    findInPreviewAction_ = new QAction(tr("Find in &preview…"), this);
+    findInPreviewAction_->setShortcut(QKeySequence::Find);
+    findInPreviewAction_->setShortcutContext(Qt::ApplicationShortcut);
+    findInPreviewAction_->setEnabled(false);
+    findInPreviewAction_->setStatusTip(tr("Focus the preview search field (searches PDF text)"));
+    connect(findInPreviewAction_, &QAction::triggered, this, &ShellMainWindow::onFocusPreviewFind);
+
+    findNextInPreviewAction_ = new QAction(tr("Find &next in preview"), this);
+    findNextInPreviewAction_->setShortcut(QKeySequence::FindNext);
+    findNextInPreviewAction_->setShortcutContext(Qt::ApplicationShortcut);
+    findNextInPreviewAction_->setEnabled(false);
+    connect(findNextInPreviewAction_, &QAction::triggered, this, &ShellMainWindow::onPreviewFindNext);
+
+    findPrevInPreviewAction_ = new QAction(tr("Find &previous in preview"), this);
+    findPrevInPreviewAction_->setShortcut(QKeySequence::FindPrevious);
+    findPrevInPreviewAction_->setShortcutContext(Qt::ApplicationShortcut);
+    findPrevInPreviewAction_->setEnabled(false);
+    connect(findPrevInPreviewAction_, &QAction::triggered, this, &ShellMainWindow::onPreviewFindPrevious);
+
     auto* editMenu = menuBar()->addMenu(tr("&Edit"));
     editMenu->addAction(editVolumeMetadataAction_);
     editMenu->addAction(reextractEmbeddedAction_);
     editMenu->addAction(readinessSummaryAction_);
+    editMenu->addSeparator();
+    editMenu->addAction(findInPreviewAction_);
+    editMenu->addAction(findNextInPreviewAction_);
+    editMenu->addAction(findPrevInPreviewAction_);
 
     auto* viewMenu = menuBar()->addMenu(tr("&View"));
     auto* themeMenu = viewMenu->addMenu(tr("&Theme"));
@@ -171,6 +197,11 @@ void ShellMainWindow::buildUi() {
     auto* previewResetZoomAction = viewMenu->addAction(tr("Preview &reset zoom"));
     previewResetZoomAction->setStatusTip(tr("Restore 100% zoom in the PDF preview"));
     connect(previewResetZoomAction, &QAction::triggered, this, &ShellMainWindow::onPreviewResetZoom);
+
+    viewMenu->addSeparator();
+    viewMenu->addAction(findInPreviewAction_);
+    viewMenu->addAction(findNextInPreviewAction_);
+    viewMenu->addAction(findPrevInPreviewAction_);
 
     auto* helpMenu = menuBar()->addMenu(tr("&Help"));
     auto* documentationAction = helpMenu->addAction(tr("&Documentation…"));
@@ -242,27 +273,82 @@ void ShellMainWindow::buildUi() {
     pageList_->setMinimumWidth(220);
     connect(pageList_, &QListWidget::currentRowChanged, this, &ShellMainWindow::onPageListRowChanged);
 
-    pdfPreview_ = new pdf_document_view::PdfDocumentViewWidget(split);
+    previewColumn_ = new QWidget(split);
+    auto* previewLayout = new QVBoxLayout(previewColumn_);
+    previewLayout->setContentsMargins(0, 0, 0, 0);
+    previewLayout->setSpacing(4);
+
+    auto* findRow = new QWidget(previewColumn_);
+    auto* findLayout = new QHBoxLayout(findRow);
+    findLayout->setContentsMargins(0, 0, 0, 0);
+    findLayout->setSpacing(4);
+
+    auto* findLabel = new QLabel(tr("Find:"), findRow);
+    previewFindField_ = new QLineEdit(findRow);
+    previewFindField_->setPlaceholderText(tr("Search in PDF…"));
+    previewFindField_->setClearButtonEnabled(true);
+    previewFindField_->setEnabled(false);
+    previewFindField_->setToolTip(tr("Search PDF text; Enter runs search, F3 next match"));
+    connect(previewFindField_, &QLineEdit::returnPressed, this, &ShellMainWindow::onPreviewFindTriggered);
+
+    auto* findPrevButton = new QToolButton(findRow);
+    findPrevButton->setIcon(shellStandardIcon(QStyle::SP_ArrowUp));
+    findPrevButton->setToolTip(tr("Previous match in PDF"));
+    connect(findPrevButton, &QToolButton::clicked, this, &ShellMainWindow::onPreviewFindPrevious);
+
+    auto* findNextButton = new QToolButton(findRow);
+    findNextButton->setIcon(shellStandardIcon(QStyle::SP_ArrowDown));
+    findNextButton->setToolTip(tr("Next match in PDF"));
+    connect(findNextButton, &QToolButton::clicked, this, &ShellMainWindow::onPreviewFindNext);
+
+    previewFindStatus_ = new QLabel(tr("—"), findRow);
+    previewFindStatus_->setMinimumWidth(72);
+
+    findLayout->addWidget(findLabel);
+    findLayout->addWidget(previewFindField_, /*stretch*/ 1);
+    findLayout->addWidget(findPrevButton);
+    findLayout->addWidget(findNextButton);
+    findLayout->addWidget(previewFindStatus_);
+
+    pdfPreview_ = new pdf_document_view::PdfDocumentViewWidget(previewColumn_);
     pdfPreview_->setMinimumWidth(280);
     connect(pdfPreview_, &pdf_document_view::PdfDocumentViewWidget::documentOpened, this,
             [this](bool ok) {
                 if (pdfPreview_ == nullptr) {
                     return;
                 }
+                if (previewFindField_ != nullptr) {
+                    previewFindField_->setEnabled(ok);
+                }
+                if (findInPreviewAction_ != nullptr) {
+                    findInPreviewAction_->setEnabled(ok);
+                }
                 if (ok) {
                     pdfPreview_->fitWidth();
                 } else {
+                    if (previewFindField_ != nullptr) {
+                        previewFindField_->clear();
+                    }
+                    pdfPreview_->clearFind();
+                    refreshPreviewFindUi();
                     statusBar()->showMessage(
                         tr("PDF preview: %1").arg(pdfPreview_->documentError()), 5000);
                 }
             });
+    connect(pdfPreview_, &pdf_document_view::PdfDocumentViewWidget::viewStateChanged, this,
+            &ShellMainWindow::onPreviewViewStateChanged);
+    connect(pdfPreview_, &pdf_document_view::PdfDocumentViewWidget::findResultsChanged, this,
+            [this](int, int) { refreshPreviewFindUi(); });
+
+    previewLayout->addWidget(findRow);
+    previewLayout->addWidget(pdfPreview_, /*stretch*/ 1);
 
     pageText_ = new QTextEdit(split);
     pageText_->setMinimumWidth(320);
     pageText_->setPlaceholderText(tr("Page text (pages/NNNN.txt)"));
 
     split->addWidget(pageList_);
-    split->addWidget(pdfPreview_);
+    split->addWidget(previewColumn_);
     split->addWidget(pageText_);
     split->setStretchFactor(0, 0);
     split->setStretchFactor(1, 1);
@@ -317,6 +403,80 @@ void ShellMainWindow::onPreviewFitWidth() {
 void ShellMainWindow::onPreviewResetZoom() {
     if (pdfPreview_ != nullptr) {
         pdfPreview_->resetZoom();
+    }
+}
+
+void ShellMainWindow::onFocusPreviewFind() {
+    if (previewFindField_ == nullptr || !previewFindField_->isEnabled()) {
+        statusBar()->showMessage(tr("Open a PDF to search the preview."), 2500);
+        return;
+    }
+    previewFindField_->setFocus(Qt::ShortcutFocusReason);
+    previewFindField_->selectAll();
+}
+
+void ShellMainWindow::onPreviewFindTriggered() {
+    if (pdfPreview_ == nullptr || previewFindField_ == nullptr) {
+        return;
+    }
+    const QString needle = previewFindField_->text();
+    if (needle.trimmed().isEmpty()) {
+        pdfPreview_->clearFind();
+        refreshPreviewFindUi();
+        return;
+    }
+    pdfPreview_->findText(needle);
+    refreshPreviewFindUi();
+    const int count = pdfPreview_->findMatchCount();
+    if (count <= 0) {
+        statusBar()->showMessage(tr("No matches in PDF."), 2500);
+    }
+}
+
+void ShellMainWindow::onPreviewFindNext() {
+    if (pdfPreview_ == nullptr || pdfPreview_->findMatchCount() <= 0) {
+        return;
+    }
+    pdfPreview_->findNext();
+    refreshPreviewFindUi();
+}
+
+void ShellMainWindow::onPreviewFindPrevious() {
+    if (pdfPreview_ == nullptr || pdfPreview_->findMatchCount() <= 0) {
+        return;
+    }
+    pdfPreview_->findPrevious();
+    refreshPreviewFindUi();
+}
+
+void ShellMainWindow::refreshPreviewFindUi() {
+    const bool hasDoc = pdfPreview_ != nullptr && pdfPreview_->isDocumentOpen();
+    const int count = hasDoc ? pdfPreview_->findMatchCount() : 0;
+    const int cur = hasDoc ? pdfPreview_->findCurrentIndex() : -1;
+
+    if (findNextInPreviewAction_ != nullptr) {
+        findNextInPreviewAction_->setEnabled(count > 0);
+    }
+    if (findPrevInPreviewAction_ != nullptr) {
+        findPrevInPreviewAction_->setEnabled(count > 0);
+    }
+    if (previewFindStatus_ != nullptr) {
+        if (count <= 0 || cur < 0) {
+            previewFindStatus_->setText(tr("—"));
+        } else {
+            previewFindStatus_->setText(tr("%1 / %2").arg(cur + 1).arg(count));
+        }
+    }
+}
+
+void ShellMainWindow::onPreviewViewStateChanged() {
+    if (pdfPreview_ == nullptr || facade_ == nullptr) {
+        return;
+    }
+    const int previewIdx = pdfPreview_->currentPageIndex();
+    const int facadeIdx = facade_->currentPageIndex();
+    if (previewIdx >= 0 && previewIdx != facadeIdx) {
+        facade_->selectPage(previewIdx);
     }
 }
 
@@ -513,6 +673,11 @@ void ShellMainWindow::syncPdfPreviewWidget() {
         return;
     }
     if (pdfPreview_->documentPath() != pdfPath || !pdfPreview_->isDocumentOpen()) {
+        if (previewFindField_ != nullptr) {
+            previewFindField_->clear();
+        }
+        pdfPreview_->clearFind();
+        refreshPreviewFindUi();
         pdfPreview_->setDocumentPath(pdfPath);
     }
     const int idx = facade_->currentPageIndex();

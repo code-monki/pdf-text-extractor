@@ -20,7 +20,7 @@ The shell lets you open **one PDF at a time**, associate it with a **local work 
 | **Menu bar** | Full text for every command (File, Edit, View → Theme). |
 | **Main toolbar** | Same commands as key File/Edit actions, shown as **icons** with **tooltips** (hover to see the full description and shortcuts). |
 | **Page list** (left) | One row per page ID; click to change the current page. |
-| **Preview** (center) | Scrollable PDF page view via **PDFDocumentView** (PDFium). Toolbar page navigation and the page list stay synchronized. Use **View → Preview fit width** / **Preview reset zoom** for zoom. |
+| **Preview** (center) | Scrollable PDF page view via **PDFDocumentView** (PDFium). Toolbar page navigation and the page list stay synchronized. **Find** bar above the preview searches PDF text with next/previous match controls. Use **View → Preview fit width** / **Preview reset zoom** for zoom. |
 | **Page text** (right) | Editable text for the current page; **Save** writes `pages/NNNN.txt` per the facade rules. |
 | **Status bar** | Session messages from the review facade. |
 | **Review line on toolbar** | Short summary of review metadata sync for the current page (NFR-006). |
@@ -43,6 +43,16 @@ Icons use the **current Qt style**’s standard pixmaps so they match the OS the
 | Next page | Arrow right | Next page. |
 | Last page | Media skip forward | Go to last page. |
 
+Above the preview column:
+
+| Control | Meaning |
+|---------|---------|
+| Find field | Type text and press **Enter** to search the open PDF (highlights matches). |
+| Up / down arrows | Previous / next match in the document. |
+| Match counter | Active match index and total (e.g. `2 / 15`), or `—` when none. |
+
+Find jumps that change the PDF page also update the page list and page text editor.
+
 ---
 
 ## Keyboard shortcuts
@@ -56,6 +66,9 @@ Shortcuts apply **globally** where Qt assigns them to the action (application sh
 | Volume metadata | **Ctrl+M** (⌘M on macOS) |
 | First page | **Ctrl+Home** |
 | Last page | **Ctrl+End** |
+| Find in preview (focus field) | **Ctrl+F** (⌘F on macOS) |
+| Find next in preview | **F3** or **Ctrl+G** (platform-dependent) |
+| Find previous in preview | **Shift+F3** or **Ctrl+Shift+G** |
 
 Preview zoom uses **View → Preview fit width** and **View → Preview reset zoom** (no default shortcuts yet).
 
@@ -76,11 +89,15 @@ Preview zoom uses **View → Preview fit width** and **View → Preview reset zo
 
 Duplicates **Volume metadata**, **Re-extract embedded candidates**, and **Readiness summary** for convenience.
 
+**Find in preview**, **Find next in preview**, and **Find previous in preview** search the PDF in the preview column (not the page text editor).
+
 ### View → Theme
 
 Choose a built-in theme (light, dark, sepia). Preference is stored per user on this machine (`QSettings`), not in the work folder.
 
 **Preview fit width** and **Preview reset zoom** adjust the PDFDocumentView preview column only.
+
+**Find in preview** (same as **Edit → Find in preview**) focuses the preview search field. **Find next** / **Find previous** cycle PDF matches with highlights.
 
 ### Help
 

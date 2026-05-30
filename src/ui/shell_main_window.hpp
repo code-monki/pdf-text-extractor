@@ -16,8 +16,10 @@
 class QAction;
 class QActionGroup;
 class QLabel;
+class QLineEdit;
 class QListWidget;
 class QTextEdit;
+class QWidget;
 
 namespace pdf_document_view {
 class PdfDocumentViewWidget;
@@ -48,6 +50,12 @@ private slots:
     void onAbout();
     void onPreviewFitWidth();
     void onPreviewResetZoom();
+    void onPreviewFindTriggered();
+    void onPreviewFindNext();
+    void onPreviewFindPrevious();
+    void onFocusPreviewFind();
+    void onPreviewViewStateChanged();
+    void refreshPreviewFindUi();
     void onPageListRowChanged(int row);
     void onFirstPage();
     void onPrevPage();
@@ -66,6 +74,9 @@ private:
 
     std::unique_ptr<pte::ui::ReviewSessionFacade> facade_;
     QListWidget* pageList_{};
+    QWidget* previewColumn_{};
+    QLineEdit* previewFindField_{};
+    QLabel* previewFindStatus_{};
     pdf_document_view::PdfDocumentViewWidget* pdfPreview_{};
     QTextEdit* pageText_{};
     QLabel* pageLabel_{};
@@ -78,5 +89,8 @@ private:
     QAction* prevPageAction_{};
     QAction* nextPageAction_{};
     QAction* lastPageAction_{};
+    QAction* findInPreviewAction_{};
+    QAction* findNextInPreviewAction_{};
+    QAction* findPrevInPreviewAction_{};
     QActionGroup* themeActionGroup_{};
 };
