@@ -106,9 +106,9 @@ End-user orientation for menus, **icon toolbar**, shortcuts, and workflows lives
 
 ## Scope of this slice
 
-- **In scope:** Application window, **File** / **Edit** / **View** / **Help** menus and main toolbar; **PDFDocumentView** (`PdfDocumentViewWidget`) preview column (PDFium) with **in-preview find** (search field, next/previous, match counter); page list / preview / text synchronization via `ReviewSessionFacade`; volume metadata dialog; readiness summary; **Help → Check extraction tools** (FR-031 via `DependencyCapabilityService`); themes; Help → Documentation / About.
-- **Preview:** Embedded **PDFDocumentView** — scrollable page view with fit-width / reset-zoom (**View** menu) and PDF text search (**Edit** / **View → Find in preview**). Poppler **`pdftoppm` is not used for shell preview** (Poppler remains required for extraction/inventory when those features are enabled).
-- **Out of scope (follow-up):** Host highlight overlays for enrichment editing, file system tree beyond page IDs.
+- **In scope:** Application window, **File** / **Edit** / **View** / **Help** menus and main toolbar; **PDFDocumentView** (`PdfDocumentViewWidget`) preview column (PDFium) with **in-preview find** and **link-map host overlays**; page list / preview / text synchronization via `ReviewSessionFacade`; volume metadata dialog; readiness summary; **Help → Check extraction tools** (FR-031 via `DependencyCapabilityService`); themes; Help → Documentation / About.
+- **Preview:** Embedded **PDFDocumentView** — scrollable page view with fit-width / reset-zoom (**View** menu), PDF text search (**Edit** / **View → Find in preview**), and optional **link-map overlays** from work-folder sidecars (FR-035/036 preview). Poppler **`pdftoppm` is not used for shell preview** (Poppler remains required for extraction/inventory when those features are enabled).
+- **Out of scope (follow-up):** Clickable in-preview link navigation (overlays are visual only), file system tree beyond page IDs.
 
 ---
 
@@ -128,7 +128,7 @@ Preview column: **PDFDocumentView** renders page content; application chrome (th
 
 ## Traceability
 
-- Requirements: FR-006, FR-008 / FR-010, FR-028 (native shell + PDFDocumentView preview), FR-031 (extraction tool report), FR-033, NFR-006, NFR-009, NFR-016.
+- Requirements: FR-006, FR-008 / FR-010, FR-028 (native shell + PDFDocumentView preview), FR-031 (extraction tool report), FR-035/FR-036 (link-map preview overlays), FR-033, NFR-006, NFR-009, NFR-016.
 - Operator documentation: **`docs/shell-user-guide.md`** (Help → Documentation target; implemented).
 - Wireframe reference: `docs/images/pdf-text-extractor-wireframe-v2.svg`.
 - ADR: `docs/adrs/0004-presentation-qt-qml-baseline.md` (Widgets amendment).

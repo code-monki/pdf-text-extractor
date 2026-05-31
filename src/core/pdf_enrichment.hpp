@@ -35,6 +35,29 @@ struct PdfEnrichmentResult {
     std::vector<std::string> warnings;
 };
 
+/** @brief One link rectangle from `link-map.json` for shell preview overlays (FR-035/036). */
+struct EnrichmentLinkPreviewEntry {
+    int pageIndex = 0;
+    /** PDF user-space rectangle: llx, lly, urx, ury (bottom-left origin). */
+    double rect[4]{};
+    bool manual = false;
+    std::string targetType;
+};
+
+struct EnrichmentLinkMapPreviewLoadResult {
+    bool success = false;
+    std::string safeMessage;
+    std::vector<EnrichmentLinkPreviewEntry> links;
+};
+
+/**
+ * @brief Loads link-map geometry for preview overlays without full enrichment validation.
+ *
+ * @details Skips outline cross-checks and target payload rules enforced by `PdfEnrichmentService`.
+ *          Does not read PDF content.
+ */
+EnrichmentLinkMapPreviewLoadResult loadLinkMapForPreview(const std::filesystem::path& path);
+
 /**
  * @brief Validates enrichment sidecars and emits a derived PDF prototype artifact.
  *

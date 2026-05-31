@@ -33,6 +33,7 @@
 #include "core/page_id.hpp"
 #include "core/page_quality.hpp"
 #include "core/page_review_sync.hpp"
+#include "core/link_map_store.hpp"
 #include "core/pdf_enrichment.hpp"
 #include "core/pdf_inspection_poppler.hpp"
 #include "core/process_runner.hpp"
@@ -2122,6 +2123,45 @@ void testPdfEnrichmentLintOnly() {
     require(!result.derivedPdfWritten, "lint-only keeps derivedPdfWritten false");
 }
 
+/** @brief Verifies link-map preview loader returns geometry for shell overlays. */
+void testLoadLinkMapForPreview() {
+    const std::filesystem::path linkMap =
+        std::filesystem::path(PTE_TEST_FIXTURE_ROOT) / "enrichment" / "link-map.json";
+    const auto loaded = pte::core::loadLinkMapForPreview(linkMap);
+    require(loaded.success, "fixture link-map loads for preview");
+    require(loaded.links.size() == 1, "fixture link-map has one link");
+    require(loaded.links[0].pageIndex == 0, "fixture link pageIndex");
+    require(loaded.links[0].targetType == "intra", "fixture link target type");
+}
+
+/** @brief Verifies editable link-map load/save round-trip for shell TOC editor. */
+void testLinkMapStoreRoundTrip() {
+    const auto root = makeTempRoot() / "link-map-store";
+    const auto path = root / "link-map.json";
+    pte::core::LinkMapDocument document;
+    pte::core::LinkMapEntry entry;
+    entry.pageIndex = 4;
+    entry.rect[0] = 72.0;
+    entry.rect[1] = 600.0;
+    entry.rect[2] = 320.0;
+    entry.rect[3] = 620.0;
+    entry.manual = true;
+    entry.targetType = "intra";
+    entry.destinationPageIndex = 12;
+    entry.destinationYPt = 720.0;
+    document.links.push_back(entry);
+
+    const auto saved = pte::core::saveLinkMapDocument(path, document);
+    require(saved.success, "link-map save succeeds");
+
+    const auto loaded = pte::core::loadLinkMapDocument(path);
+    require(loaded.success, "link-map load succeeds");
+    require(loaded.document.links.size() == 1, "one link round-trips");
+    require(loaded.document.links[0].pageIndex == 4, "pageIndex round-trips");
+    require(loaded.document.links[0].destinationPageIndex == 12, "destination round-trips");
+    require(loaded.document.links[0].manual, "manual flag round-trips");
+}
+
 /** @brief Verifies optional Python enrichment path can inject annotations when toolchain is present. */
 void testPdfEnrichmentAnnotationInjectionOptional() {
     const auto root = makeTempRoot() / "pdf-enrichment-injection";
@@ -2288,6 +2328,8 @@ int main() {
     runTest("pdf enrichment rejects unknown intra destination id",
             testPdfEnrichmentRejectsUnknownIntraDestinationId);
     runTest("pdf enrichment lint only", testPdfEnrichmentLintOnly);
+    runTest("load link map for preview", testLoadLinkMapForPreview);
+    runTest("link map store round trip", testLinkMapStoreRoundTrip);
     runTest("pdf enrichment optional annotation injection",
             testPdfEnrichmentAnnotationInjectionOptional);
 

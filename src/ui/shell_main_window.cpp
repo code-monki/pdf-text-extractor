@@ -6,8 +6,11 @@
  */
 
 #include "ui/app_theme.hpp"
+#include "ui/link_map_editor_dialog.hpp"
 #include "ui/shell_main_window.hpp"
 #include "ui/volume_metadata_dialog.hpp"
+
+#include "core/link_map_store.hpp"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -25,6 +28,9 @@
 #include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QRubberBand>
+#include <QScrollBar>
 #include <QSignalBlocker>
 #include <QSize>
 #include <QSplitter>
@@ -39,12 +45,16 @@
 #include <QWindow>
 #include <QSizePolicy>
 
+#include <pdf_document_view/page_highlight.hpp>
+#include <pdf_document_view/pdf_document_model.hpp>
 #include <pdf_document_view/pdf_document_view_widget.hpp>
 
 #include "core/readiness_summary.hpp"
 
 #include <QtGlobal>
 
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 
 namespace {
@@ -56,6 +66,36 @@ namespace {
  */
 QIcon shellStandardIcon(QStyle::StandardPixmap which) {
     return QApplication::style()->standardIcon(which);
+}
+
+QRectF pdfUserRectToTopDown(double x1, double y1, double x2, double y2, double pageHeightPt) {
+    const double left = std::min({x1, x2});
+    const double right = std::max({x1, x2});
+    const double yBottom = std::min({y1, y2});
+    const double yTop = std::max({y1, y2});
+    return QRectF(left, pageHeightPt - yTop, right - left, yTop - yBottom);
+}
+
+QSize layoutDocumentPixelSize(const pdf_document_view::PdfDocumentViewWidget* widget) {
+    if (widget == nullptr || !widget->isDocumentOpen()) {
+        return {};
+    }
+    pdf_document_view::PdfDocumentModel* model = widget->documentModel();
+    if (model == nullptr) {
+        return {};
+    }
+    const QSizeF pagePts = model->pageSize(widget->currentPageIndex());
+    if (pagePts.width() <= 0.0 || pagePts.height() <= 0.0) {
+        return {};
+    }
+    const qreal lx = widget->viewport()->logicalDpiX();
+    const qreal ly = widget->viewport()->logicalDpiY();
+    const double zoom = widget->zoom();
+    const int widthPx =
+        static_cast<int>(std::ceil(pagePts.width() * zoom * lx / 72.0));
+    const int heightPx =
+        static_cast<int>(std::ceil(pagePts.height() * zoom * ly / 72.0));
+    return QSize(widthPx, heightPx);
 }
 
 /** @brief Resolves operator guide path for Help → Documentation (repo dev tree or app bundle). */
@@ -203,6 +243,20 @@ void ShellMainWindow::buildUi() {
     viewMenu->addAction(findNextInPreviewAction_);
     viewMenu->addAction(findPrevInPreviewAction_);
 
+    showLinkMapOverlaysAction_ = viewMenu->addAction(tr("Show link-map &overlays"));
+    showLinkMapOverlaysAction_->setCheckable(true);
+    showLinkMapOverlaysAction_->setEnabled(false);
+    showLinkMapOverlaysAction_->setStatusTip(
+        tr("Draw link-map.json rectangles on the PDF preview (work folder link-map.json)"));
+    connect(showLinkMapOverlaysAction_, &QAction::toggled, this,
+            &ShellMainWindow::onLinkMapOverlaysToggled);
+
+    editTocLinksAction_ = viewMenu->addAction(tr("Edit TOC &links…"));
+    editTocLinksAction_->setEnabled(false);
+    editTocLinksAction_->setStatusTip(
+        tr("Open a modeless editor to draw TOC link rectangles and assign destination pages"));
+    connect(editTocLinksAction_, &QAction::triggered, this, &ShellMainWindow::onEditTocLinks);
+
     auto* helpMenu = menuBar()->addMenu(tr("&Help"));
     auto* checkToolsAction = helpMenu->addAction(tr("Check extraction &tools…"));
     checkToolsAction->setStatusTip(tr("Report Poppler and Tesseract availability (FR-031)"));
@@ -327,6 +381,18 @@ void ShellMainWindow::buildUi() {
                 if (findInPreviewAction_ != nullptr) {
                     findInPreviewAction_->setEnabled(ok);
                 }
+                if (showLinkMapOverlaysAction_ != nullptr) {
+                    showLinkMapOverlaysAction_->setEnabled(ok);
+                    if (!ok) {
+                        showLinkMapOverlaysAction_->setChecked(false);
+                    }
+                }
+                if (editTocLinksAction_ != nullptr) {
+                    editTocLinksAction_->setEnabled(ok);
+                    if (!ok && linkMapEditor_ != nullptr) {
+                        linkMapEditor_->close();
+                    }
+                }
                 if (ok) {
                     pdfPreview_->fitWidth();
                 } else {
@@ -335,6 +401,7 @@ void ShellMainWindow::buildUi() {
                     }
                     pdfPreview_->clearFind();
                     refreshPreviewFindUi();
+                    pdfPreview_->clearPageHighlights();
                     statusBar()->showMessage(
                         tr("PDF preview: %1").arg(pdfPreview_->documentError()), 5000);
                 }
@@ -343,6 +410,10 @@ void ShellMainWindow::buildUi() {
             &ShellMainWindow::onPreviewViewStateChanged);
     connect(pdfPreview_, &pdf_document_view::PdfDocumentViewWidget::findResultsChanged, this,
             [this](int, int) { refreshPreviewFindUi(); });
+
+    pdfPreview_->viewport()->installEventFilter(this);
+    linkMapRubberBand_ = new QRubberBand(QRubberBand::Rectangle, pdfPreview_->viewport());
+    linkMapRubberBand_->hide();
 
     previewLayout->addWidget(findRow);
     previewLayout->addWidget(pdfPreview_, /*stretch*/ 1);
@@ -403,6 +474,99 @@ void ShellMainWindow::onCheckExtractionTools() {
         return;
     }
     QMessageBox::information(this, tr("Extraction tools"), facade_->extractionToolsReport());
+}
+
+void ShellMainWindow::onLinkMapOverlaysToggled(bool enabled) {
+    if (enabled && facade_ != nullptr) {
+        facade_->reloadEnrichmentLinkPreview();
+    }
+    syncLinkMapHighlights();
+    if (enabled && facade_ != nullptr && facade_->enrichmentLinkCount() <= 0) {
+        statusBar()->showMessage(facade_->enrichmentLinkMapStatus(), 4000);
+    } else if (enabled && facade_ != nullptr && facade_->enrichmentLinkCount() > 0) {
+        statusBar()->showMessage(
+            tr("Link-map overlays: %1 rectangle(s) on this page (orange=manual, blue=auto).")
+                .arg(facade_->enrichmentLinksForPage(facade_->currentPageIndex()).size()),
+            4000);
+    }
+}
+
+void ShellMainWindow::syncLinkMapHighlights() {
+    if (pdfPreview_ == nullptr) {
+        return;
+    }
+    if (showLinkMapOverlaysAction_ == nullptr || facade_ == nullptr || !pdfPreview_->isDocumentOpen()) {
+        pdfPreview_->clearPageHighlights();
+        return;
+    }
+    const bool editorActive = linkMapEditor_ != nullptr;
+    const bool overlaysEnabled = showLinkMapOverlaysAction_->isChecked() || editorActive;
+    if (!overlaysEnabled) {
+        pdfPreview_->clearPageHighlights();
+        return;
+    }
+
+    const int pageIndex = facade_->currentPageIndex();
+    if (pageIndex < 0) {
+        pdfPreview_->clearPageHighlights();
+        return;
+    }
+
+    pdf_document_view::PdfDocumentModel* model = pdfPreview_->documentModel();
+    if (model == nullptr) {
+        pdfPreview_->clearPageHighlights();
+        return;
+    }
+    const QSizeF pagePts = model->pageSize(pageIndex);
+    if (pagePts.height() <= 0.0) {
+        pdfPreview_->clearPageHighlights();
+        return;
+    }
+
+    const std::vector<pte::core::EnrichmentLinkPreviewEntry> entries =
+        facade_->enrichmentLinksForPage(pageIndex);
+    QVector<pdf_document_view::PageHighlight> highlights;
+    highlights.reserve(static_cast<int>(entries.size()));
+    for (std::size_t i = 0; i < facade_->linkMapDocument().links.size(); ++i) {
+        const pte::core::LinkMapEntry& entry = facade_->linkMapDocument().links[i];
+        if (entry.pageIndex != pageIndex) {
+            continue;
+        }
+        pdf_document_view::PageHighlight highlight;
+        highlight.pageIndex = entry.pageIndex;
+        highlight.pageRect = pdfUserRectToTopDown(
+            entry.rect[0], entry.rect[1], entry.rect[2], entry.rect[3], pagePts.height());
+        const bool selected =
+            linkMapSelectedGlobalIndex_.has_value() && *linkMapSelectedGlobalIndex_ == i;
+        if (selected) {
+            highlight.fill = QColor(40, 180, 70, 90);
+            highlight.border = QColor(20, 120, 40, 240);
+        } else if (entry.manual) {
+            highlight.fill = QColor(255, 140, 0, 70);
+            highlight.border = QColor(200, 90, 0, 220);
+        } else {
+            highlight.fill = QColor(0, 120, 215, 55);
+            highlight.border = QColor(0, 90, 160, 210);
+        }
+        highlights.push_back(highlight);
+    }
+    if (highlights.isEmpty()) {
+        for (const pte::core::EnrichmentLinkPreviewEntry& entry : entries) {
+            pdf_document_view::PageHighlight highlight;
+            highlight.pageIndex = entry.pageIndex;
+            highlight.pageRect = pdfUserRectToTopDown(
+                entry.rect[0], entry.rect[1], entry.rect[2], entry.rect[3], pagePts.height());
+            if (entry.manual) {
+                highlight.fill = QColor(255, 140, 0, 70);
+                highlight.border = QColor(200, 90, 0, 220);
+            } else {
+                highlight.fill = QColor(0, 120, 215, 55);
+                highlight.border = QColor(0, 90, 160, 210);
+            }
+            highlights.push_back(highlight);
+        }
+    }
+    pdfPreview_->setPageHighlights(highlights);
 }
 
 void ShellMainWindow::onPreviewFitWidth() {
@@ -632,6 +796,13 @@ void ShellMainWindow::refreshSessionUi() {
     }
     refreshPageUi();
     refreshPageText();
+    if (showLinkMapOverlaysAction_ != nullptr) {
+        showLinkMapOverlaysAction_->setEnabled(facade_->pageCount() > 0);
+    }
+    if (editTocLinksAction_ != nullptr) {
+        editTocLinksAction_->setEnabled(facade_->pageCount() > 0
+                                        && !facade_->workFolderPath().isEmpty());
+    }
 }
 
 void ShellMainWindow::refreshPageUi() {
@@ -673,6 +844,7 @@ void ShellMainWindow::refreshPageUi() {
     }
     refreshReviewSync();
     syncPdfPreviewWidget();
+    syncLinkMapHighlights();
 }
 
 void ShellMainWindow::syncPdfPreviewWidget() {
@@ -714,3 +886,234 @@ void ShellMainWindow::refreshPageText() {
 void ShellMainWindow::refreshStatus() {
     statusBar()->showMessage(facade_->statusMessage());
 }
+
+void ShellMainWindow::refreshLinkMapEditorHighlights() {
+    syncLinkMapHighlights();
+}
+
+void ShellMainWindow::onEditTocLinks() {
+    if (facade_ == nullptr || facade_->workFolderPath().isEmpty()) {
+        statusBar()->showMessage(tr("Open a PDF with a work folder to edit TOC links."), 4000);
+        return;
+    }
+    if (linkMapEditor_ != nullptr) {
+        linkMapEditor_->raise();
+        linkMapEditor_->activateWindow();
+        return;
+    }
+    if (showLinkMapOverlaysAction_ != nullptr && !showLinkMapOverlaysAction_->isChecked()) {
+        showLinkMapOverlaysAction_->setChecked(true);
+    }
+    facade_->loadLinkMapForEditing();
+    auto* dialog = new pte::ui::LinkMapEditorDialog(this, facade_.get());
+    linkMapEditor_ = dialog;
+    connect(dialog, &pte::ui::LinkMapEditorDialog::interactionModeChanged, this,
+            &ShellMainWindow::onLinkMapInteractionModeChanged);
+    connect(dialog, &pte::ui::LinkMapEditorDialog::editorClosed, this,
+            &ShellMainWindow::onLinkMapEditorClosed);
+    dialog->show();
+    refreshLinkMapEditorHighlights();
+    statusBar()->showMessage(
+        tr("TOC link editor open — draw or pick a rectangle, navigate the main window, then capture "
+           "destination."),
+        6000);
+}
+
+void ShellMainWindow::onLinkMapEditorClosed() {
+    setLinkMapInteractionMode(pte::ui::LinkMapInteractionMode::None);
+    linkMapEditor_.clear();
+    linkMapSelectedGlobalIndex_.reset();
+    if (linkMapRubberBand_ != nullptr) {
+        linkMapRubberBand_->hide();
+    }
+    syncLinkMapHighlights();
+}
+
+void ShellMainWindow::onLinkMapInteractionModeChanged(int mode) {
+    setLinkMapInteractionMode(static_cast<pte::ui::LinkMapInteractionMode>(mode));
+}
+
+void ShellMainWindow::setLinkMapInteractionMode(pte::ui::LinkMapInteractionMode mode) {
+    linkMapInteractionMode_ = mode;
+    linkMapDragging_ = false;
+    if (linkMapRubberBand_ != nullptr) {
+        linkMapRubberBand_->hide();
+    }
+    if (mode == pte::ui::LinkMapInteractionMode::DrawSourceRect) {
+        statusBar()->showMessage(tr("Drag a rectangle on the PDF preview."), 4000);
+    } else if (mode == pte::ui::LinkMapInteractionMode::PickExistingSource) {
+        statusBar()->showMessage(tr("Click an existing link rectangle on the PDF preview."), 4000);
+    } else if (mode == pte::ui::LinkMapInteractionMode::CaptureDestination) {
+        statusBar()->showMessage(
+            tr("Navigate the page list or preview, then click Capture in the TOC link editor."), 5000);
+    }
+}
+
+bool ShellMainWindow::mapPreviewViewportToPagePoint(const QPoint& viewportPos,
+                                                    double& topDownX,
+                                                    double& topDownY) const {
+    if (pdfPreview_ == nullptr || !pdfPreview_->isDocumentOpen()) {
+        return false;
+    }
+    pdf_document_view::PdfDocumentModel* model = pdfPreview_->documentModel();
+    if (model == nullptr) {
+        return false;
+    }
+    const int pageIndex = pdfPreview_->currentPageIndex();
+    const QSizeF pagePts = model->pageSize(pageIndex);
+    if (pagePts.width() <= 0.0 || pagePts.height() <= 0.0) {
+        return false;
+    }
+    const QSize docPx = layoutDocumentPixelSize(pdfPreview_);
+    if (docPx.width() <= 0 || docPx.height() <= 0) {
+        return false;
+    }
+    const int scrollX = pdfPreview_->horizontalScrollBar()->value();
+    const int scrollY = pdfPreview_->verticalScrollBar()->value();
+    const double docX = static_cast<double>(scrollX + viewportPos.x());
+    const double docY = static_cast<double>(scrollY + viewportPos.y());
+    topDownX = docX / static_cast<double>(docPx.width()) * pagePts.width();
+    topDownY = docY / static_cast<double>(docPx.height()) * pagePts.height();
+    return topDownX >= 0.0 && topDownY >= 0.0 && topDownX <= pagePts.width()
+           && topDownY <= pagePts.height();
+}
+
+void ShellMainWindow::topDownRectToPdfUser(const QRectF& topDownRect,
+                                           double pageHeightPt,
+                                           double outRect[4]) const {
+    const double left = topDownRect.left();
+    const double right = topDownRect.right();
+    const double top = topDownRect.top();
+    const double bottom = topDownRect.bottom();
+    outRect[0] = left;
+    outRect[2] = right;
+    outRect[3] = pageHeightPt - top;
+    outRect[1] = pageHeightPt - bottom;
+}
+
+void ShellMainWindow::finishLinkMapRectDrag(const QPoint& viewportPos) {
+    if (facade_ == nullptr || pdfPreview_ == nullptr || linkMapRubberBand_ == nullptr) {
+        return;
+    }
+    const QRect dragRect = QRect(linkMapDragOrigin_, viewportPos).normalized();
+    linkMapRubberBand_->hide();
+    linkMapDragging_ = false;
+    if (dragRect.width() < 4 || dragRect.height() < 4) {
+        return;
+    }
+
+    pdf_document_view::PdfDocumentModel* model = pdfPreview_->documentModel();
+    if (model == nullptr) {
+        return;
+    }
+    const int pageIndex = facade_->currentPageIndex();
+    const QSizeF pagePts = model->pageSize(pageIndex);
+    if (pagePts.height() <= 0.0) {
+        return;
+    }
+    const QSize docPx = layoutDocumentPixelSize(pdfPreview_);
+    if (docPx.width() <= 0 || docPx.height() <= 0) {
+        return;
+    }
+    const int scrollX = pdfPreview_->horizontalScrollBar()->value();
+    const int scrollY = pdfPreview_->verticalScrollBar()->value();
+    const double docLeft = static_cast<double>(scrollX + dragRect.left());
+    const double docTop = static_cast<double>(scrollY + dragRect.top());
+    const double docRight = static_cast<double>(scrollX + dragRect.right());
+    const double docBottom = static_cast<double>(scrollY + dragRect.bottom());
+    const QRectF topDownRect(
+        docLeft / docPx.width() * pagePts.width(),
+        docTop / docPx.height() * pagePts.height(),
+        (docRight - docLeft) / docPx.width() * pagePts.width(),
+        (docBottom - docTop) / docPx.height() * pagePts.height());
+
+    pte::core::LinkMapEntry entry;
+    entry.pageIndex = pageIndex;
+    topDownRectToPdfUser(topDownRect, pagePts.height(), entry.rect);
+    entry.manual = true;
+    entry.targetType = "intra";
+    entry.destinationPageIndex = -1;
+
+    linkMapSelectedGlobalIndex_.reset();
+    if (linkMapEditor_ != nullptr) {
+        linkMapEditor_->setPendingSourceRect(entry);
+    }
+    setLinkMapInteractionMode(pte::ui::LinkMapInteractionMode::None);
+    refreshLinkMapEditorHighlights();
+    statusBar()->showMessage(tr("Source rectangle captured. Capture a destination page next."), 4000);
+}
+
+bool ShellMainWindow::eventFilter(QObject* watched, QEvent* event) {
+    if (pdfPreview_ == nullptr || watched != pdfPreview_->viewport()
+        || linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::None
+        || linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::CaptureDestination) {
+        return QMainWindow::eventFilter(watched, event);
+    }
+
+    if (event->type() == QEvent::MouseButtonPress) {
+        auto* mouse = static_cast<QMouseEvent*>(event);
+        if (mouse->button() != Qt::LeftButton) {
+            return QMainWindow::eventFilter(watched, event);
+        }
+        if (linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::DrawSourceRect) {
+            linkMapDragOrigin_ = mouse->pos();
+            linkMapDragging_ = true;
+            if (linkMapRubberBand_ != nullptr) {
+                linkMapRubberBand_->setGeometry(QRect(linkMapDragOrigin_, QSize()));
+                linkMapRubberBand_->show();
+            }
+            return true;
+        }
+    }
+
+    if (event->type() == QEvent::MouseMove && linkMapDragging_
+        && linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::DrawSourceRect) {
+        auto* mouse = static_cast<QMouseEvent*>(event);
+        if (linkMapRubberBand_ != nullptr) {
+            linkMapRubberBand_->setGeometry(QRect(linkMapDragOrigin_, mouse->pos()).normalized());
+        }
+        return true;
+    }
+
+    if (event->type() == QEvent::MouseButtonRelease) {
+        auto* mouse = static_cast<QMouseEvent*>(event);
+        if (mouse->button() != Qt::LeftButton) {
+            return QMainWindow::eventFilter(watched, event);
+        }
+        if (linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::DrawSourceRect && linkMapDragging_) {
+            finishLinkMapRectDrag(mouse->pos());
+            return true;
+        }
+        if (linkMapInteractionMode_ == pte::ui::LinkMapInteractionMode::PickExistingSource
+            && facade_ != nullptr) {
+            double topDownX = 0.0;
+            double topDownY = 0.0;
+            if (!mapPreviewViewportToPagePoint(mouse->pos(), topDownX, topDownY)) {
+                statusBar()->showMessage(tr("Click inside the page area."), 2500);
+                return true;
+            }
+            pdf_document_view::PdfDocumentModel* model = pdfPreview_->documentModel();
+            if (model == nullptr) {
+                return true;
+            }
+            const int pageIndex = facade_->currentPageIndex();
+            const double pageHeight = model->pageSize(pageIndex).height();
+            const std::optional<std::size_t> hit =
+                facade_->linkMapHitTestOnPage(pageIndex, topDownX, topDownY, pageHeight);
+            if (!hit.has_value()) {
+                statusBar()->showMessage(tr("No link rectangle at that point."), 2500);
+                return true;
+            }
+            linkMapSelectedGlobalIndex_ = hit;
+            if (linkMapEditor_ != nullptr) {
+                linkMapEditor_->selectLinkByGlobalIndex(static_cast<int>(*hit));
+            }
+            setLinkMapInteractionMode(pte::ui::LinkMapInteractionMode::None);
+            refreshLinkMapEditorHighlights();
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+

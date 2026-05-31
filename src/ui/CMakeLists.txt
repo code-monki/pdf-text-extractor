@@ -10,6 +10,8 @@ set(CMAKE_AUTOMOC ON)
 add_executable(pte_shell
     app_theme.cpp
     app_theme.hpp
+    link_map_editor_dialog.cpp
+    link_map_editor_dialog.hpp
     main.cpp
     shell_main_window.cpp
     shell_main_window.hpp

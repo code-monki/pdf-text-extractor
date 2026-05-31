@@ -99,6 +99,10 @@ Choose a built-in theme (light, dark, sepia). Preference is stored per user on t
 
 **Find in preview** (same as **Edit → Find in preview**) focuses the preview search field. **Find next** / **Find previous** cycle PDF matches with highlights.
 
+**Show link-map overlays** draws rectangles from the work folder’s `link-map.json` (or `enrichment/link-map.json`) on the current PDF page. Orange = manual entries; blue = automatic. Coordinates are converted from PDF user space to the preview widget’s top-down page space. Interior content pages are the usual target — cover pages (`pageIndex` 0) rarely contain link rectangles in real maps.
+
+**Edit TOC links…** opens a **modeless** editor window. Draw or pick a source rectangle on the PDF preview, navigate the main window to the destination page (page list or preview), capture that page, **Apply link**, then **Save link-map.json**. Overlays are passive QA aids — they do not navigate until a derived PDF is built downstream (`pte_enrich`).
+
 ### Help
 
 - **Check extraction tools…** — reports whether Poppler (`pdfinfo`, `pdftotext`, `pdftoppm`) and optional **Tesseract** are on `PATH` or common install locations. Required tools must be present before **Open PDF** and **Re-extract embedded candidates** can populate page text. Preview rendering uses **PDFium**, not Poppler.

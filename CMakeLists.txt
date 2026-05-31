@@ -35,6 +35,7 @@ add_library(pdf_text_extractor_core
     src/core/file_change_detector.cpp
     src/core/file_digest.cpp
     src/core/json.cpp
+    src/core/link_map_store.cpp
     src/core/local_path_intent.cpp
     src/core/ocr_routing.cpp
     src/core/output_config.cpp

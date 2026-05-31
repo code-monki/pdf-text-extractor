@@ -328,5 +328,73 @@ PdfEnrichmentResult PdfEnrichmentService::run(const PdfEnrichmentRequest& reques
     return result;
 }
 
-} // namespace pte::core
+EnrichmentLinkMapPreviewLoadResult loadLinkMapForPreview(const std::filesystem::path& path) {
+    EnrichmentLinkMapPreviewLoadResult result;
+    const auto text = readUtf8File(path);
+    if (!text.has_value()) {
+        result.safeMessage = "link-map not readable";
+        return result;
+    }
+    const JsonParseResult parsed = parseJson(*text);
+    if (!parsed.value.has_value()) {
+        result.safeMessage = "link-map JSON parse failed";
+        return result;
+    }
 
+    const JsonValue* schemaVersion = parsed.value->find("schemaVersion");
+    if (schemaVersion == nullptr || !schemaVersion->isNumber()
+        || static_cast<int>(*schemaVersion->asNumber()) != 1) {
+        result.safeMessage = "link-map schemaVersion must be 1";
+        return result;
+    }
+
+    const JsonValue* links = parsed.value->find("links");
+    if (links == nullptr || !links->isArray()) {
+        result.safeMessage = "link-map missing links array";
+        return result;
+    }
+
+    for (const JsonValue& link : *links->asArray()) {
+        if (link.asObject() == nullptr) {
+            result.safeMessage = "link-map link must be object";
+            return result;
+        }
+        const JsonValue* pageIndex = link.find("pageIndex");
+        const JsonValue* rect = link.find("rect");
+        const JsonValue* target = link.find("target");
+        if (pageIndex == nullptr || !pageIndex->isNumber() || rect == nullptr || !rect->isArray()
+            || target == nullptr || !target->isObject()) {
+            result.safeMessage = "link-map link missing required fields";
+            return result;
+        }
+        if (rect->asArray()->size() != 4) {
+            result.safeMessage = "link-map rect must have four numbers";
+            return result;
+        }
+        EnrichmentLinkPreviewEntry entry;
+        entry.pageIndex = static_cast<int>(*pageIndex->asNumber());
+        for (std::size_t i = 0; i < 4; ++i) {
+            const JsonValue& coord = rect->asArray()->at(i);
+            if (!coord.isNumber()) {
+                result.safeMessage = "link-map rect coordinates must be numeric";
+                return result;
+            }
+            entry.rect[i] = *coord.asNumber();
+        }
+        const JsonValue* type = target->find("type");
+        if (type != nullptr && type->isString()) {
+            entry.targetType = *type->asString();
+        }
+        const JsonValue* manual = link.find("manual");
+        if (manual != nullptr && manual->isBool()) {
+            entry.manual = *manual->asBool();
+        }
+        result.links.push_back(entry);
+    }
+
+    result.success = true;
+    result.safeMessage = "link-map preview loaded";
+    return result;
+}
+
+} // namespace pte::core

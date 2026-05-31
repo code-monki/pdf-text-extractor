@@ -9,7 +9,12 @@
 #include <QString>
 #include <QStringList>
 
+#include "core/link_map_store.hpp"
+#include "core/pdf_enrichment.hpp"
+
 #include <filesystem>
+#include <optional>
+#include <vector>
 
 namespace pte::ui {
 
@@ -95,6 +100,38 @@ public:
     Q_INVOKABLE QString extractionToolsReport() const;
     /** @brief True when required extraction tools (pdfinfo, pdftotext) are detected locally. */
     Q_INVOKABLE bool requiredExtractionToolsAvailable() const;
+    /** @brief Number of link-map entries loaded for preview overlays (0 when none). */
+    int enrichmentLinkCount() const;
+    /** @brief Safe status for link-map preview load (empty when no map path was checked). */
+    QString enrichmentLinkMapStatus() const;
+    /** @brief Link-map entries on @p pageIndex for preview host highlights. */
+    std::vector<pte::core::EnrichmentLinkPreviewEntry> enrichmentLinksForPage(int pageIndex) const;
+    /** @brief Reloads `link-map.json` from the active work folder when present. */
+    void reloadEnrichmentLinkPreview();
+    /** @brief Loads editable link-map into memory for the TOC editor. */
+    bool loadLinkMapForEditing();
+    /** @brief Persists in-memory link-map to the work folder sidecar. */
+    bool saveLinkMapDocument();
+    /** @brief In-memory link-map document for shell editing. */
+    const pte::core::LinkMapDocument& linkMapDocument() const;
+    /** @brief Safe status from the last link-map edit operation. */
+    QString linkMapEditStatus() const;
+    /**
+     * @brief Inserts or replaces one link entry.
+     * @param editIndex When set, replaces that global index; otherwise appends.
+     */
+    bool upsertLinkMapEntry(const pte::core::LinkMapEntry& entry,
+                            std::optional<std::size_t> editIndex);
+    /** @brief Removes a link by global index in @ref linkMapDocument(). */
+    bool removeLinkMapEntry(std::size_t globalIndex);
+    /**
+     * @brief Hit-tests link rectangles on @p pageIndex in top-down page points.
+     * @return Global link index when a rectangle contains the point.
+     */
+    std::optional<std::size_t> linkMapHitTestOnPage(int pageIndex,
+                                                      double topDownX,
+                                                      double topDownY,
+                                                      double pageHeightPt) const;
 
 signals:
     void statusMessageChanged();
@@ -127,6 +164,11 @@ private:
     QString volumeTitle_;
     /** True when the editor text came from embedded candidates because pages/N.txt was blank. */
     bool lastFillWasEmbeddedCandidate_{false};
+    std::vector<pte::core::EnrichmentLinkPreviewEntry> enrichmentLinks_;
+    QString enrichmentLinkMapStatus_;
+    pte::core::LinkMapDocument linkMapDocument_;
+    QString linkMapEditStatus_;
+    std::filesystem::path linkMapFilePath_;
 };
 
 } // namespace pte::ui

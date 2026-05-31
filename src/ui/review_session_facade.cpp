@@ -11,6 +11,8 @@
 #include "core/dependency_capability.hpp"
 #include "core/page_review_sync.hpp"
 #include "core/reviewed_page_text.hpp"
+#include "core/link_map_store.hpp"
+#include "core/pdf_enrichment.hpp"
 #include "core/review_state_update.hpp"
 #include "core/volume_bootstrap.hpp"
 #include "core/volume_extraction_pipeline.hpp"
@@ -185,6 +187,37 @@ bool isBlankReviewedText(std::string_view text) {
     return std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isspace(c) != 0; });
 }
 
+bool pointInPdfUserRect(double topDownX,
+                        double topDownY,
+                        const pte::core::LinkMapEntry& entry,
+                        double pageHeightPt) {
+    const double left = std::min(entry.rect[0], entry.rect[2]);
+    const double right = std::max(entry.rect[0], entry.rect[2]);
+    const double yBottom = std::min(entry.rect[1], entry.rect[3]);
+    const double yTop = std::max(entry.rect[1], entry.rect[3]);
+    const double tdTop = pageHeightPt - yTop;
+    const double tdBottom = pageHeightPt - yBottom;
+    return topDownX >= left && topDownX <= right && topDownY >= tdTop && topDownY <= tdBottom;
+}
+
+void syncEnrichmentLinksFromDocument(
+    const pte::core::LinkMapDocument& document,
+    std::vector<pte::core::EnrichmentLinkPreviewEntry>& outLinks) {
+    outLinks.clear();
+    outLinks.reserve(document.links.size());
+    for (const pte::core::LinkMapEntry& entry : document.links) {
+        pte::core::EnrichmentLinkPreviewEntry preview;
+        preview.pageIndex = entry.pageIndex;
+        preview.rect[0] = entry.rect[0];
+        preview.rect[1] = entry.rect[1];
+        preview.rect[2] = entry.rect[2];
+        preview.rect[3] = entry.rect[3];
+        preview.manual = entry.manual;
+        preview.targetType = entry.targetType;
+        outLinks.push_back(preview);
+    }
+}
+
 } // namespace
 
 ReviewSessionFacade::ReviewSessionFacade(QObject* parent) : QObject(parent) {}
@@ -342,6 +375,7 @@ bool ReviewSessionFacade::openPdf(const QString& pdfPath, const QString& request
 
     sourcePdfPath_ = QString::fromStdString(source.string());
     workFolderPath_ = QString::fromStdString(workFolder.string());
+    reloadEnrichmentLinkPreview();
 
     pageIds_.clear();
     for (int page = 1; page <= *result.pageCount; ++page) {
@@ -576,6 +610,166 @@ QString ReviewSessionFacade::extractionToolsReport() const {
 
 bool ReviewSessionFacade::requiredExtractionToolsAvailable() const {
     return detectExtractionTools().ok();
+}
+
+void ReviewSessionFacade::reloadEnrichmentLinkPreview() {
+    enrichmentLinks_.clear();
+    enrichmentLinkMapStatus_.clear();
+    if (workFolderPath_.isEmpty()) {
+        return;
+    }
+    const std::filesystem::path workFolder(workFolderPath_.toStdString());
+    const std::optional<std::filesystem::path> linkMapPath =
+        pte::core::resolveLinkMapPath(workFolder);
+    if (!linkMapPath.has_value()) {
+        enrichmentLinkMapStatus_ = QStringLiteral("No link-map.json in work folder.");
+        return;
+    }
+    const pte::core::LinkMapStoreResult loaded = pte::core::loadLinkMapDocument(*linkMapPath);
+    enrichmentLinkMapStatus_ = QString::fromStdString(loaded.safeMessage);
+    if (!loaded.success) {
+        return;
+    }
+    linkMapDocument_ = loaded.document;
+    linkMapFilePath_ = *linkMapPath;
+    syncEnrichmentLinksFromDocument(linkMapDocument_, enrichmentLinks_);
+    enrichmentLinkMapStatus_ =
+        QStringLiteral("Link map: %1 rectangle(s) from %2")
+            .arg(enrichmentLinks_.size())
+            .arg(QString::fromStdString(linkMapPath->filename().string()));
+}
+
+int ReviewSessionFacade::enrichmentLinkCount() const {
+    return static_cast<int>(enrichmentLinks_.size());
+}
+
+QString ReviewSessionFacade::enrichmentLinkMapStatus() const {
+    return enrichmentLinkMapStatus_;
+}
+
+std::vector<pte::core::EnrichmentLinkPreviewEntry> ReviewSessionFacade::enrichmentLinksForPage(
+    int pageIndex) const {
+    std::vector<pte::core::EnrichmentLinkPreviewEntry> matches;
+    for (const pte::core::EnrichmentLinkPreviewEntry& entry : enrichmentLinks_) {
+        if (entry.pageIndex == pageIndex) {
+            matches.push_back(entry);
+        }
+    }
+    return matches;
+}
+
+bool ReviewSessionFacade::loadLinkMapForEditing() {
+    linkMapEditStatus_.clear();
+    linkMapDocument_.links.clear();
+    linkMapFilePath_.clear();
+    if (workFolderPath_.isEmpty()) {
+        linkMapEditStatus_ = QStringLiteral("Open a PDF with a work folder first.");
+        return false;
+    }
+    const std::filesystem::path workFolder(workFolderPath_.toStdString());
+    linkMapFilePath_ = *pte::core::resolveLinkMapPath(workFolder);
+    const pte::core::LinkMapStoreResult loaded =
+        pte::core::loadLinkMapDocument(linkMapFilePath_);
+    linkMapEditStatus_ = QString::fromStdString(loaded.safeMessage);
+    if (!loaded.success) {
+        return false;
+    }
+    linkMapDocument_ = loaded.document;
+    syncEnrichmentLinksFromDocument(linkMapDocument_, enrichmentLinks_);
+    enrichmentLinkMapStatus_ = linkMapEditStatus_;
+    return true;
+}
+
+bool ReviewSessionFacade::saveLinkMapDocument() {
+    linkMapEditStatus_.clear();
+    if (workFolderPath_.isEmpty()) {
+        linkMapEditStatus_ = QStringLiteral("No work folder.");
+        return false;
+    }
+    if (linkMapFilePath_.empty()) {
+        linkMapFilePath_ =
+            *pte::core::resolveLinkMapPath(std::filesystem::path(workFolderPath_.toStdString()));
+    }
+    const pte::core::LinkMapStoreResult saved =
+        pte::core::saveLinkMapDocument(linkMapFilePath_, linkMapDocument_);
+    linkMapEditStatus_ = QString::fromStdString(saved.safeMessage);
+    if (!saved.success) {
+        return false;
+    }
+    syncEnrichmentLinksFromDocument(linkMapDocument_, enrichmentLinks_);
+    enrichmentLinkMapStatus_ = linkMapEditStatus_;
+    return true;
+}
+
+const pte::core::LinkMapDocument& ReviewSessionFacade::linkMapDocument() const {
+    return linkMapDocument_;
+}
+
+QString ReviewSessionFacade::linkMapEditStatus() const {
+    return linkMapEditStatus_;
+}
+
+bool ReviewSessionFacade::upsertLinkMapEntry(const pte::core::LinkMapEntry& entry,
+                                             std::optional<std::size_t> editIndex) {
+    linkMapEditStatus_.clear();
+    if (entry.pageIndex < 0) {
+        linkMapEditStatus_ = QStringLiteral("Source page index is invalid.");
+        return false;
+    }
+    if (entry.destinationPageIndex < 0) {
+        linkMapEditStatus_ = QStringLiteral("Destination page is required.");
+        return false;
+    }
+    pte::core::LinkMapEntry normalized = entry;
+    normalized.manual = true;
+    normalized.targetType = "intra";
+    normalized.destinationId.clear();
+    normalized.url.clear();
+    if (editIndex.has_value()) {
+        if (*editIndex >= linkMapDocument_.links.size()) {
+            linkMapEditStatus_ = QStringLiteral("Selected link index is out of range.");
+            return false;
+        }
+        linkMapDocument_.links[*editIndex] = normalized;
+        linkMapEditStatus_ = QStringLiteral("Link updated in memory. Save to write link-map.json.");
+    } else {
+        linkMapDocument_.links.push_back(normalized);
+        linkMapEditStatus_ = QStringLiteral("Link added in memory. Save to write link-map.json.");
+    }
+    syncEnrichmentLinksFromDocument(linkMapDocument_, enrichmentLinks_);
+    return true;
+}
+
+bool ReviewSessionFacade::removeLinkMapEntry(std::size_t globalIndex) {
+    linkMapEditStatus_.clear();
+    if (globalIndex >= linkMapDocument_.links.size()) {
+        linkMapEditStatus_ = QStringLiteral("Selected link index is out of range.");
+        return false;
+    }
+    linkMapDocument_.links.erase(linkMapDocument_.links.begin()
+                                 + static_cast<std::ptrdiff_t>(globalIndex));
+    linkMapEditStatus_ = QStringLiteral("Link removed in memory. Save to write link-map.json.");
+    syncEnrichmentLinksFromDocument(linkMapDocument_, enrichmentLinks_);
+    return true;
+}
+
+std::optional<std::size_t> ReviewSessionFacade::linkMapHitTestOnPage(int pageIndex,
+                                                                      double topDownX,
+                                                                      double topDownY,
+                                                                      double pageHeightPt) const {
+    if (pageIndex < 0 || pageHeightPt <= 0.0) {
+        return std::nullopt;
+    }
+    for (std::size_t i = linkMapDocument_.links.size(); i-- > 0;) {
+        const pte::core::LinkMapEntry& entry = linkMapDocument_.links[i];
+        if (entry.pageIndex != pageIndex) {
+            continue;
+        }
+        if (pointInPdfUserRect(topDownX, topDownY, entry, pageHeightPt)) {
+            return i;
+        }
+    }
+    return std::nullopt;
 }
 
 } // namespace pte::ui

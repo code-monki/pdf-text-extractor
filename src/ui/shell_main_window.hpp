@@ -9,8 +9,10 @@
  */
 
 #include <QMainWindow>
-#include <memory>
+#include <QPointer>
+#include <optional>
 
+#include "ui/link_map_editor_dialog.hpp"
 #include "ui/review_session_facade.hpp"
 
 class QAction;
@@ -18,6 +20,7 @@ class QActionGroup;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QRubberBand;
 class QTextEdit;
 class QWidget;
 
@@ -39,6 +42,12 @@ public:
     explicit ShellMainWindow(QWidget* parent = nullptr);
     ~ShellMainWindow() override;
 
+    /** @brief Refreshes preview overlays after in-memory link-map edits. */
+    void refreshLinkMapEditorHighlights();
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private slots:
     void onOpenPdf();
     void onEditVolumeMetadata();
@@ -57,6 +66,11 @@ private slots:
     void onFocusPreviewFind();
     void onPreviewViewStateChanged();
     void refreshPreviewFindUi();
+    void syncLinkMapHighlights();
+    void onLinkMapOverlaysToggled(bool enabled);
+    void onEditTocLinks();
+    void onLinkMapEditorClosed();
+    void onLinkMapInteractionModeChanged(int mode);
     void onPageListRowChanged(int row);
     void onFirstPage();
     void onPrevPage();
@@ -72,6 +86,12 @@ private slots:
 private:
     void buildUi();
     void wireFacade();
+    void setLinkMapInteractionMode(pte::ui::LinkMapInteractionMode mode);
+    void finishLinkMapRectDrag(const QPoint& viewportPos);
+    bool mapPreviewViewportToPagePoint(const QPoint& viewportPos, double& topDownX, double& topDownY) const;
+    void topDownRectToPdfUser(const QRectF& topDownRect,
+                              double pageHeightPt,
+                              double outRect[4]) const;
 
     std::unique_ptr<pte::ui::ReviewSessionFacade> facade_;
     QListWidget* pageList_{};
@@ -93,5 +113,13 @@ private:
     QAction* findInPreviewAction_{};
     QAction* findNextInPreviewAction_{};
     QAction* findPrevInPreviewAction_{};
+    QAction* showLinkMapOverlaysAction_{};
+    QAction* editTocLinksAction_{};
+    pte::ui::LinkMapInteractionMode linkMapInteractionMode_{pte::ui::LinkMapInteractionMode::None};
+    QPointer<pte::ui::LinkMapEditorDialog> linkMapEditor_;
+    QRubberBand* linkMapRubberBand_{};
+    QPoint linkMapDragOrigin_;
+    bool linkMapDragging_{false};
+    std::optional<std::size_t> linkMapSelectedGlobalIndex_;
     QActionGroup* themeActionGroup_{};
 };
